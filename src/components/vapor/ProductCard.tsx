@@ -55,16 +55,19 @@ export function ProductCard({ p, index = 0 }: { p: VProduct; index?: number }) {
           {/* نور نئونی روی لبه هنگام لمس/هاور */}
           <div className="pointer-events-none absolute inset-0 rounded-[20px] bg-gradient-to-t from-ink/60 via-transparent to-transparent opacity-80" />
 
-          {pct > 0 && (
-            <span className="absolute top-3 right-3 rounded-xl bg-gradient-to-l from-neon to-ice px-2.5 py-1 text-[11px] font-extrabold text-ink tnum" dir="ltr">
-              ٪{pct}
-            </span>
-          )}
-          {p.newArrival && (
-            <span className="absolute top-3 left-3 rounded-xl bg-vio/85 px-2.5 py-1 text-[10.5px] font-extrabold text-white backdrop-blur">
-              جدید
-            </span>
-          )}
+          {/* بج‌ها در بالا سمت راست */}
+          <div className="absolute top-3 right-3 z-10 flex flex-wrap items-center gap-1.5 pointer-events-none">
+            {pct > 0 && (
+              <span className="rounded-xl bg-gradient-to-l from-neon to-ice px-2.5 py-1 text-[11px] font-extrabold text-ink tnum shadow-sm" dir="ltr">
+                ٪{pct}
+              </span>
+            )}
+            {p.newArrival && (
+              <span className="rounded-xl bg-vio/85 px-2.5 py-1 text-[10.5px] font-extrabold text-white backdrop-blur shadow-sm">
+                جدید
+              </span>
+            )}
+          </div>
           {out && (
             <span className="absolute inset-0 grid place-items-center bg-ink/60 backdrop-blur-[2px] text-[13px] font-extrabold text-blush">
               ناموجود
@@ -72,16 +75,16 @@ export function ProductCard({ p, index = 0 }: { p: VProduct; index?: number }) {
           )}
         </Link>
 
-        {/* دکمه علاقه‌مندی */}
+        {/* دکمه علاقه‌مندی - همیشه در گوشه بالا چپ */}
         <button
           onClick={() => toggleWish(p.id, p.name)}
           aria-pressed={saved}
           aria-label={saved ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
-          className={`pressable absolute top-3 left-12 grid h-11 w-11 place-items-center rounded-full backdrop-blur-md ${
-            saved ? "bg-blush/90 text-ink" : "bg-ink/50 text-snow"
+          className={`pressable absolute top-3 left-3 z-10 grid h-10 w-10 place-items-center rounded-full backdrop-blur-md border border-white/10 transition-colors ${
+            saved ? "bg-blush text-ink shadow-[0_0_14px_rgba(240,171,252,0.5)]" : "bg-ink/60 text-snow hover:bg-ink/80 hover:text-blush"
           }`}
         >
-          <HeartIcon size={19} filled={saved} />
+          <HeartIcon size={18} filled={saved} />
         </button>
 
         <div className="p-3.5">
