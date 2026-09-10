@@ -1,7 +1,7 @@
 "use client";
 
 /* معادل AgeCheckModal.vue — تأییدیه ورود +۱۸ با ورود بلورین */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useVape } from "@/store/vapeStore";
 import { SITE, DISCLAIMER, haptic } from "@/lib/vape";
@@ -10,6 +10,17 @@ import { DropletIcon } from "@/components/vapor/VIcons";
 export function AgeGate() {
   const { ageOk, hydrated, confirmAge, toast } = useVape();
   const [under, setUnder] = useState(false);
+
+  useEffect(() => {
+    if (hydrated && (!ageOk || under)) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [hydrated, ageOk, under]);
 
   if (!hydrated) return null;
 

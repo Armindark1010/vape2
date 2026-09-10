@@ -92,13 +92,13 @@ export function CategorySlider({
                   decoding="async"
                   className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.07]"
                 />
-                <div className={`absolute inset-0 bg-gradient-to-t ${tintBg} to-transparent`} />
+                <div className={`absolute inset-0 bg-gradient-to-t ${meta.tint === "neon" ? "from-ink via-neon/15" : meta.tint === "ice" ? "from-ink via-ice/15" : meta.tint === "blush" ? "from-ink via-blush/15" : "from-ink via-vio/20"} to-transparent`} />
                 <div className="absolute inset-x-0 bottom-0 flex items-end justify-between p-4">
                   <div>
-                    <p className="text-[17px] font-extrabold text-snow">{c.name}</p>
+                    <p className="text-[17px] font-extrabold text-snow drop-shadow-md">{c.name}</p>
                     <p className="mt-0.5 text-[11px] text-mist tnum">{c.count} محصول</p>
                   </div>
-                  <span className="text-[22px] drop-shadow-[0_0_14px_rgba(167,139,250,0.8)]">{meta.emoji}</span>
+                  <span className="text-[24px] drop-shadow-[0_0_14px_rgba(167,139,250,0.8)]">{meta.emoji}</span>
                 </div>
               </div>
             </Link>

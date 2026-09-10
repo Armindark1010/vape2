@@ -50,7 +50,8 @@ export default async function ShopPage({
   const catName = cats.find((c) => c.slug === s("category"))?.name;
   const brandName = brands.find((b) => b.slug === s("brand"))?.name;
   const allPrices = (await getProducts({}, 60)).map((p) => p.discountPrice ?? p.price);
-  const priceCeil = Math.ceil(Math.max(...allPrices) / 100_000) * 100_000;
+  const maxPrice = allPrices.length > 0 ? Math.max(...allPrices) : 3_000_000;
+  const priceCeil = Math.ceil(maxPrice / 100_000) * 100_000;
 
   const initial = {
     category: s("category"),
