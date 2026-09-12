@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { ChevronLeftIcon } from "~/components/vapor/VIcons";
+import { ChevronLeftIcon, Cube3DIcon } from "~/components/vapor/VIcons";
 import { haptic } from "~/utils/vape";
 
 const props = defineProps<{
   images: string[];
   name: string;
+}>();
+
+const emit = defineEmits<{
+  (e: "open-3d"): void;
 }>();
 
 const imgs = computed(() => (props.images && props.images.length ? props.images : [""]));
@@ -66,6 +70,16 @@ const onMouseUp = (e: MouseEvent) => {
           class="h-full w-full object-cover transition-all duration-300"
           draggable="false"
         />
+
+        <!-- دکمه مشاهده ۳ بعدی 3D Interactive -->
+        <button
+          type="button"
+          class="pressable absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-2xl border border-vio/50 bg-ink/75 px-3.5 py-2 text-[12px] font-extrabold text-white backdrop-blur-md glow-v transition-all hover:scale-105 cursor-pointer"
+          @click.stop="emit('open-3d')"
+        >
+          <Cube3DIcon :size="18" class="text-neon" />
+          <span>مشاهده ۳D و ۳۶۰°</span>
+        </button>
       </div>
 
       <template v-if="imgs.length > 1">

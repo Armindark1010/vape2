@@ -126,3 +126,14 @@ export type ShopFilters = {
   sort?: string;
   q?: string;
 };
+
+export type AuthUser = {
+  id: number;
+  name: string;
+  username: string;
+  email: string;
+  phone?: string | null;
+  isAdmin?: boolean;
+  createdAt?: string;
+};
+

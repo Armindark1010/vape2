@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import type { Product } from "~/types";
 import BuyBox from "~/components/vapor/BuyBox.vue";
 import Gallery from "~/components/vapor/Gallery.vue";
+import Product3DModal from "~/components/vapor/Product3DModal.vue";
 import SectionRow from "~/components/vapor/SectionRow.vue";
 import ProductRail from "~/components/vapor/ProductRail.vue";
 import RailItem from "~/components/vapor/RailItem.vue";
@@ -14,11 +15,13 @@ import {
   RefreshIcon,
   FlameIcon,
   TruckIcon,
+  Cube3DIcon,
 } from "~/components/vapor/VIcons";
 import { SITE } from "~/utils/vape";
 
 const route = useRoute();
 const slug = computed(() => route.params.slug as string);
+const show3DModal = ref(false);
 
 const { data: product, error } = await useFetch<Product>(() => `/api/products/${slug.value}`, {
   key: `product-${slug.value}`,
@@ -96,11 +99,46 @@ useHead({
     </nav>
 
     <div class="grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-14">
-      <Gallery :images="product.images" :name="product.name" />
+      <div>
+        <Gallery
+          :images="product.images"
+          :name="product.name"
+          @open-3d="show3DModal = true"
+        />
+
+        <!-- بنر میانبر اسکن ۳ بعدی -->
+        <div class="mt-4 flex items-center justify-between rounded-2xl border border-vio/20 bg-vio/8 p-3.5 backdrop-blur-md">
+          <div class="flex items-center gap-2.5">
+            <span class="grid h-8 w-8 place-items-center rounded-xl bg-vio/20 text-vio glow-v">
+              <Cube3DIcon :size="18" />
+            </span>
+            <div>
+              <p class="text-[12px] font-extrabold text-snow">نمایشگر سه‌بعدی تعاملی و AR</p>
+              <p class="text-[10px] text-mist">مدل را بچرخانید و رنگ‌های مختلف آن را تست کنید</p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            class="pressable rounded-xl bg-vio px-3 py-1.5 text-[11px] font-extrabold text-ink glow-v transition-all hover:scale-105 cursor-pointer"
+            @click="show3DModal = true"
+          >
+            مشاهده ۳D
+          </button>
+        </div>
+      </div>
+
       <div class="lg:pt-4">
         <BuyBox :product="product" />
       </div>
     </div>
+
+    <!-- مودال سه‌بعدی -->
+    <Product3DModal
+      :show="show3DModal"
+      :product="product"
+      @close="show3DModal = false"
+    />
 
     <!-- توضیحات و مشخصات -->
     <section class="mt-12 grid gap-6 lg:grid-cols-2">

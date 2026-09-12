@@ -57,11 +57,13 @@ model OtpCode {
 }
 
 model Category {
-  id        String    @id @default(uuid()) @db.Uuid
-  name      String    @unique
-  slug      String    @unique
-  products  Product[]
-  createdAt DateTime  @default(now())
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  image       String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
 
   @@map("categories")
 }
@@ -76,6 +78,11 @@ model Product {
   stock            Int          @default(0)
   type             ProductType
   brand            String
+  brandSlug        String?
+  images           String[]     @default([])
+  featured         Boolean      @default(false)
+  rating           Decimal?     @default(5.0) @db.Decimal(3, 2)
+  reviewCount      Int          @default(0)
   
   // Specialized Vape Attributes
   nicotineStrength String?      // e.g. "20mg", "50mg", "3mg", "6mg"

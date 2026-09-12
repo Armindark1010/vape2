@@ -127,3 +127,26 @@ export const SlidersIcon: FunctionalComponent<IconProps> = (p) =>
     h("circle", { cx: "16", cy: "8", r: "2.4" }),
     h("circle", { cx: "8", cy: "16", r: "2.4" }),
   ]);
+
+export const Cube3DIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "m21 16-9 5-9-5V8l9-5 9 5v8Z" }),
+    h("path", { d: "m3.27 6.96 8.73 4.88 8.73-4.88M12 21.84V11.84" }),
+  ]);
+
+export const CameraIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" }),
+    h("circle", { cx: "12", cy: "13", r: "4" }),
+  ]);
+
+export const Rotate3DIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-1.19" }),
+  ]);
+
+export const SparklesIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z" }),
+  ]);
+

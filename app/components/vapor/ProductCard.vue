@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { Product } from "~/types";
 import { useVape } from "~/composables/useVape";
+import { useAuth } from "~/composables/useAuth";
 import { money, haptic, CATS_META } from "~/utils/vape";
 import { HeartIcon, PlusIcon, StarIcon } from "~/components/vapor/VIcons";
 
@@ -16,6 +17,7 @@ const props = withDefaults(
 );
 
 const { add, inWish, toggleWish } = useVape();
+const { requireAuth } = useAuth();
 
 const out = computed(() => props.p.stock <= 0);
 const price = computed(() => props.p.discountPrice ?? props.p.price);
@@ -27,17 +29,20 @@ const flavorHint = computed(() => props.p.tagline);
 
 const onAdd = () => {
   if (out.value) return;
-  haptic(10);
-  add({
-    id: props.p.id,
-    slug: props.p.slug,
-    name: props.p.name,
-    img: props.p.images[0] ?? "",
-    price: price.value,
-    oldPrice: props.p.discountPrice != null ? props.p.price : null,
-    stock: props.p.stock,
-  });
+  requireAuth(() => {
+    haptic(10);
+    add({
+      id: props.p.id,
+      slug: props.p.slug,
+      name: props.p.name,
+      img: props.p.images[0] ?? "",
+      price: price.value,
+      oldPrice: props.p.discountPrice != null ? props.p.price : null,
+      stock: props.p.stock,
+    });
+  }, "برای افزودن به سبد خرید لطفاً وارد حساب خود شوید");
 };
+
 </script>
 
 <template>
@@ -90,7 +95,7 @@ const onAdd = () => {
         ]"
         :aria-pressed="saved"
         :aria-label="saved ? 'حذف از علاقه‌مندی‌ها' : 'افزودن به علاقه‌مندی‌ها'"
-        @click="toggleWish(p.id, p.name)"
+        @click="requireAuth(() => toggleWish(p.id, p.name), 'برای لایک کردن این محصول لطفاً وارد حساب خود شوید')"
       >
         <HeartIcon :size="18" :filled="saved" />
       </button>

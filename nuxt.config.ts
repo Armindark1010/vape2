@@ -58,6 +58,18 @@ export default defineNuxtConfig({
           href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='7' fill='%2309090b'/%3E%3Cpath d='M12 4.5s5.2 5.4 5.2 9.2a5.2 5.2 0 0 1-10.4 0C6.8 9.9 12 4.5 12 4.5Z' fill='%23a78bfa'/%3E%3C/svg%3E",
         },
       ],
+      script: [
+        {
+          type: "module",
+          src: "https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js",
+        },
+      ],
+    },
+  },
+
+  vue: {
+    compilerOptions: {
+      isCustomElement: (tag: string) => tag === "model-viewer",
     },
   },
 });

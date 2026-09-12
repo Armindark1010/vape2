@@ -23,6 +23,7 @@ const props = defineProps<{
 
 const router = useRouter();
 const { add, inWish, toggleWish } = useVape();
+const { requireAuth } = useAuth();
 const qty = ref(1);
 
 const opts = computed<Opts | null>(() => {
@@ -50,26 +51,29 @@ const flavors = computed(() => opts.value?.flavors ?? []);
 
 const addToCart = (buyNow = false) => {
   if (out.value) return;
-  haptic(12);
-  add(
-    {
-      id: props.product.id,
-      slug: props.product.slug,
-      name: props.product.name,
-      img: props.product.images[0] ?? "",
-      price: price.value,
-      oldPrice: props.product.discountPrice != null ? props.product.price : null,
-      stock: props.product.stock,
-      flavor: flavor.value,
-      nicotine: nic.value,
-    },
-    qty.value,
-    buyNow
-  );
-  if (buyNow) {
-    router.push("/checkout");
-  }
+  requireAuth(() => {
+    haptic(12);
+    add(
+      {
+        id: props.product.id,
+        slug: props.product.slug,
+        name: props.product.name,
+        img: props.product.images[0] ?? "",
+        price: price.value,
+        oldPrice: props.product.discountPrice != null ? props.product.price : null,
+        stock: props.product.stock,
+        flavor: flavor.value,
+        nicotine: nic.value,
+      },
+      qty.value,
+      buyNow
+    );
+    if (buyNow) {
+      router.push("/checkout");
+    }
+  }, buyNow ? "برای خرید فوری لطفاً ابتدا وارد حساب خود شوید" : "برای افزودن به سبد خرید لطفاً وارد حساب شوید");
 };
+
 
 const selectFlavor = (f: string) => {
   haptic(6);
@@ -197,7 +201,7 @@ const selectNic = (n: string) => {
         ]"
         :aria-pressed="saved"
         aria-label="علاقه‌مندی"
-        @click="toggleWish(product.id, product.name)"
+        @click="requireAuth(() => toggleWish(product.id, product.name), 'برای لایک کردن این محصول لطفاً وارد حساب شوید')"
       >
         <HeartIcon :size="20" :filled="saved" />
       </button>

@@ -2,6 +2,7 @@
 import { ref, watch, onMounted, onUnmounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useVape } from "~/composables/useVape";
+import { useAuth } from "~/composables/useAuth";
 import { SITE, haptic, BRANDS_LINE } from "~/utils/vape";
 import {
   HomeIcon,
@@ -18,6 +19,7 @@ type Hit = { id: number; slug: string; name: string; price: number; image: strin
 const route = useRoute();
 const router = useRouter();
 const { cartCount, setCartOpen, hydrated } = useVape();
+const { user, isLoggedIn, openAuth } = useAuth();
 
 const searchOpen = ref(false);
 const q = ref("");
@@ -79,6 +81,14 @@ const search = (term: string) => {
   }, 180);
 };
 
+const onSearchInput = (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  if (target) {
+    search(target.value);
+  }
+};
+
+
 const go = (slug: string) => {
   searchOpen.value = false;
   router.push(`/product/${slug}`);
@@ -137,12 +147,25 @@ const onItemClick = (it: (typeof items)[0]) => {
             </span>
           </button>
           <NuxtLink
+            v-if="isLoggedIn"
             to="/account"
-            class="pressable grid h-11 w-11 place-items-center rounded-xl border border-white/12 text-snow transition-colors hover:border-vio/40 hover:text-vio"
+            class="pressable flex h-11 items-center gap-2 rounded-xl border border-vio/40 bg-vio/10 px-3.5 text-[12.5px] font-bold text-snow transition-colors hover:border-vio/70"
             aria-label="حساب کاربری"
           >
-            <UserIcon :size="19" />
+            <span class="grid h-6 w-6 place-items-center rounded-lg bg-gradient-to-br from-vio to-ice text-[11px] font-extrabold text-ink">
+              {{ (user?.name || user?.username || 'ک')[0] }}
+            </span>
+            <span class="max-w-[110px] truncate text-snow">{{ user?.name || user?.username }}</span>
           </NuxtLink>
+          <button
+            v-else
+            class="pressable flex h-11 items-center gap-2 rounded-xl border border-white/12 bg-white/4 px-3.5 text-[12.5px] font-bold text-mist transition-colors hover:border-white/25 hover:text-snow cursor-pointer"
+            aria-label="ورود به حساب"
+            @click="openAuth('login')"
+          >
+            <UserIcon :size="16" />
+            <span>ورود / عضویت</span>
+          </button>
         </div>
       </div>
     </header>
@@ -234,7 +257,7 @@ const onItemClick = (it: (typeof items)[0]) => {
                   placeholder="دنبال چه طعمی هستی؟ (انگور یخ، بلوبری…)"
                   class="input h-14 rounded-2xl pr-12 text-[15px]"
                   aria-label="جستجو"
-                  @input="(e: any) => search(e.target.value)"
+                  @input="onSearchInput"
                 />
               </div>
               <button

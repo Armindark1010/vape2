@@ -5,6 +5,7 @@ import CartSheet from "~/components/vapor/CartSheet.vue";
 import AgeGate from "~/components/vapor/AgeGate.vue";
 import Toasts from "~/components/vapor/Toasts.vue";
 import AIAssistant from "~/components/vapor/AIAssistant.vue";
+import AuthModal from "~/components/vapor/AuthModal.vue";
 </script>
 
 <template>
@@ -27,5 +28,6 @@ import AIAssistant from "~/components/vapor/AIAssistant.vue";
     <AgeGate />
     <Toasts />
     <AIAssistant />
+    <AuthModal />
   </div>
 </template>

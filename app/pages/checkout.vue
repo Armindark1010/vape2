@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useVape } from "~/composables/useVape";
-import { money, FREE_SHIPPING, haptic, DEMO_USER } from "~/utils/vape";
+import { useAuth } from "~/composables/useAuth";
+import { money, FREE_SHIPPING, haptic } from "~/utils/vape";
 import {
   ArrowLeftIcon,
   CheckIcon,
@@ -14,10 +15,25 @@ useSeoMeta({
 });
 
 const { cart, cartTotal, clear, ageOk, hydrated } = useVape();
+const { user, isLoggedIn, openAuth } = useAuth();
 const done = ref<string | null>(null);
 const busy = ref(false);
 const err = ref("");
-const f = ref({ name: "", phone: "", city: "تهران", addr: "", zip: "", note: "" });
+const f = ref({
+  name: user.value?.name || "",
+  phone: user.value?.phone || "",
+  city: "تهران",
+  addr: "",
+  zip: "",
+  note: "",
+});
+
+onMounted(() => {
+  if (user.value) {
+    if (!f.value.name && user.value.name) f.value.name = user.value.name;
+    if (!f.value.phone && user.value.phone) f.value.phone = user.value.phone;
+  }
+});
 
 const shipping = computed(() =>
   cartTotal.value >= FREE_SHIPPING || cart.value.length === 0 ? 0 : 65000
@@ -36,6 +52,7 @@ const place = async () => {
   busy.value = true;
   err.value = "";
   try {
+    const customerEmail = user.value?.email || `${f.value.phone.trim()}@vapora.local`;
     const d = await $fetch<{ ok: boolean; number: string; error?: string }>("/api/checkout", {
       method: "POST",
       body: {
@@ -43,7 +60,7 @@ const place = async () => {
         couponCode: null,
         customer: {
           name: f.value.name.trim(),
-          email: DEMO_USER.email,
+          email: customerEmail,
           phone: f.value.phone.trim(),
           line1: f.value.addr.trim(),
           line2: f.value.note.trim() || undefined,

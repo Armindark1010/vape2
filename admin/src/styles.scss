@@ -1,0 +1,128 @@
+/* ==========================================================================
+   📌 فایل استایل سراسری (Global Styles - styles.scss)
+   ==========================================================================
+   💡 این معادل چیه؟
+   توی Nuxt 3 این فایل معادل `assets/css/main.css` یا فایل‌های SCSS گلوبال
+   است که در `nuxt.config.ts` ایمپورت می‌شدند. در Angular در فایل `angular.json`
+   داخل آرایه `styles` رجیستر می‌شود.
+   ========================================================================== */
+
+:root {
+  /* پالت رنگی دارک تک و نئونی (Dark Tech + Neon Vapora Palette) */
+  --bg-main: #09090b;
+  --bg-surface: #121217;
+  --bg-card: rgba(24, 24, 32, 0.75);
+  --bg-card-hover: rgba(32, 32, 44, 0.85);
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(167, 139, 250, 0.5);
+
+  --color-primary: #a78bfa;     /* بنفش نئونی ویپ */
+  --color-accent: #22c55e;      /* سبز نئونی موفقیت/استاتوس */
+  --color-ice: #38bdf8;         /* آبی یخی */
+  --color-blush: #f43f5e;       /* قرمز رزبری هشدار/حذف */
+  --color-gold: #f59e0b;        /* طلایی ستاره و توجه */
+
+  --text-main: #f8fafc;
+  --text-dim: #94a3b8;
+  --text-muted: #64748b;
+
+  --sidebar-width: 270px;
+  --sidebar-collapsed-width: 80px;
+  --header-height: 70px;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  --font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Fira Code', monospace;
+
+  --glass-blur: blur(16px);
+  --glow-primary: 0 0 20px rgba(167, 139, 250, 0.25);
+  --glow-accent: 0 0 16px rgba(34, 197, 94, 0.25);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--font-family);
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  direction: rtl;
+  text-align: right;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* اسکرول‌بار مدرن و دارک */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+/* لینک‌ها و دکمه‌ها */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+  outline: none;
+  border: none;
+}
+
+button {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* تایپوگرافی اعداد انگلیسی/فارسی تمیز */
+.tnum, .font-mono {
+  font-family: var(--font-mono);
+  direction: ltr;
+  display: inline-block;
+}
+
+/* کلاس‌های کمکی شیشه‌ای و کارت */
+.glass-card {
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.glow-btn {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-ice));
+  color: #09090b;
+  font-weight: 700;
+  border-radius: var(--radius-md);
+  padding: 0.65rem 1.4rem;
+  box-shadow: var(--glow-primary);
+  &:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+  &:active {
+    transform: translateY(0);
+  }
+}
