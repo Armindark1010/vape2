@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vape_store_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: vape_user
+      POSTGRES_PASSWORD: vape_password
+      POSTGRES_DB: vape_store_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_vape_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vape_user -d vape_store_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_vape_data:
+    driver: local
