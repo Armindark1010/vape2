@@ -3,7 +3,7 @@
   "outputDirectory": "dist/vapora-admin/browser",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ]

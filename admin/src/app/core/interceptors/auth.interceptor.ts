@@ -28,10 +28,13 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const token = authService.getToken();
 
-  // 1️⃣ اگر درخواست به مسیر /api باشد و در محیط دولوپمنت پورت ۴۲۰۰ باشیم، مستقیم به سرور ناکست ۳۰۰۱ هدایت شود
+  // 1️⃣ بررسی آدرس پایه API (از localStorage یا پورت ۴۲۰۰ به ۳۰۰۱)
   let finalUrl = req.url;
   if (typeof window !== 'undefined' && finalUrl.startsWith('/api')) {
-    if (window.location.port === '4200') {
+    const customBase = localStorage.getItem('vapelab_api_base_url') || localStorage.getItem('vapora_api_base_url');
+    if (customBase && customBase.trim()) {
+      finalUrl = `${customBase.trim().replace(/\/+$/, '')}${finalUrl}`;
+    } else if (window.location.port === '4200') {
       finalUrl = `https://${window.location.hostname}:3001${finalUrl}`;
     }
   }

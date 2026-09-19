@@ -35,11 +35,16 @@ import { AuthService } from '../../core/services/auth.service';
 
       <!-- وضعیت زنده سیستم و پروفایل کاربری -->
       <div class="header-right">
-        <!-- برچسب وضعیت زنده سرور -->
-        <div class="live-status" title="ارتباط زنده با پایگاه‌داده">
-          <span class="status-pulse"></span>
-          <span class="status-text">دیتابیس متصل</span>
-        </div>
+        <!-- برچسب وضعیت زنده سرور و تنظیم آدرس API -->
+        <button
+          class="live-status"
+          [class.not-configured]="!isConfigured"
+          (click)="configureApiUrl()"
+          [title]="'آدرس سرور متصل: ' + currentApiUrl + ' (برای تغییر کلیک کنید)'"
+        >
+          <span class="status-pulse" [class.warning]="!isConfigured"></span>
+          <span class="status-text">{{ isConfigured ? 'دیتابیس متصل ⚙️' : '🔗 تنظیم سرور API' }}</span>
+        </button>
 
         <!-- نشانگر سطح دسترسی کاربر -->
         <div class="role-badge" [class.admin-role]="authService.isFullAdmin()">
@@ -47,7 +52,7 @@ import { AuthService } from '../../core/services/auth.service';
         </div>
 
         <!-- لینک بازگشت به فروشگاه اصلی -->
-        <a href="http://localhost:3000" target="_blank" class="store-link-btn" title="مشاهده فروشگاه عمومی">
+        <a [href]="storeUrl" target="_blank" class="store-link-btn" title="مشاهده فروشگاه عمومی">
           <span class="icon">🌐</span>
           <span class="text">فروشگاه</span>
         </a>
@@ -133,6 +138,23 @@ import { AuthService } from '../../core/services/auth.service';
         padding: 4px 10px;
         border-radius: var(--radius-full);
         font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          transform: scale(1.02);
+          background: rgba(34, 197, 94, 0.2);
+        }
+
+        &.not-configured {
+          color: #f59e0b;
+          background: rgba(245, 158, 11, 0.12);
+          border-color: rgba(245, 158, 11, 0.35);
+
+          &:hover {
+            background: rgba(245, 158, 11, 0.22);
+          }
+        }
 
         .status-pulse {
           width: 7px;
@@ -141,6 +163,11 @@ import { AuthService } from '../../core/services/auth.service';
           background: var(--color-accent);
           box-shadow: 0 0 8px var(--color-accent);
           animation: pulse 1.8s infinite;
+
+          &.warning {
+            background: #f59e0b;
+            box-shadow: 0 0 8px #f59e0b;
+          }
         }
 
         @media (max-width: 480px) {
@@ -201,4 +228,49 @@ export class HeaderComponent {
   @Output() toggleSidebar = new EventEmitter<void>();
 
   readonly authService = inject(AuthService);
+
+  get isConfigured(): boolean {
+    if (typeof window === 'undefined') return true;
+    const url = localStorage.getItem('vapelab_api_base_url') || localStorage.getItem('vapora_api_base_url');
+    return !!(url && url.trim());
+  }
+
+  get currentApiUrl(): string {
+    if (typeof window === 'undefined') return '';
+    const custom = localStorage.getItem('vapelab_api_base_url') || localStorage.getItem('vapora_api_base_url');
+    if (custom && custom.trim()) return custom.trim();
+    if (window.location.port === '4200') return 'https://localhost:3001';
+    return window.location.origin;
+  }
+
+  get storeUrl(): string {
+    if (typeof window === 'undefined') return '/';
+    const custom = localStorage.getItem('vapelab_api_base_url') || localStorage.getItem('vapora_api_base_url');
+    if (custom && custom.trim()) return custom.trim();
+    if (window.location.port === '4200') return 'https://localhost:3001';
+    return '/';
+  }
+
+  configureApiUrl(): void {
+    if (typeof window === 'undefined') return;
+    const current = localStorage.getItem('vapelab_api_base_url') || '';
+    const newUrl = window.prompt(
+      '🔗 آدرس دامین بک‌اند یا فروشگاه اصلی ویپ‌لب (Nuxt Storefront API) را وارد کنید:\n\nمثال لوکال: https://localhost:3001\nمثال ورسل: https://vape2-yourproject.vercel.app',
+      current || (window.location.hostname.includes('vercel.app') ? 'https://' : 'https://localhost:3001')
+    );
+
+    if (newUrl !== null) {
+      const cleanUrl = newUrl.trim().replace(/\/+$/, '');
+      if (cleanUrl) {
+        localStorage.setItem('vapelab_api_base_url', cleanUrl);
+        localStorage.setItem('vapora_api_base_url', cleanUrl);
+        alert(`✅ آدرس سرور با موفقیت به ${cleanUrl} تنظیم شد. صفحه برای اعمال تغییرات رفرش می‌شود.`);
+      } else {
+        localStorage.removeItem('vapelab_api_base_url');
+        localStorage.removeItem('vapora_api_base_url');
+        alert('🔄 تنظیمات آدرس سرور پاک شد و به حالت پیش‌فرض بازگشت.');
+      }
+      window.location.reload();
+    }
+  }
 }
