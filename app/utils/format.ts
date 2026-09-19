@@ -42,3 +42,8 @@ export function initials(name: string) {
 export function emailOk(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim());
 }
+
+export function toFarsi(str: string | number): string {
+  const farsiDigits = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
+  return String(str).replace(/[0-9]/g, (w) => farsiDigits[+w] || w);
+}

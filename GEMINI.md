@@ -1,7 +1,7 @@
-# VAPORA Store - Project Knowledge & Instructions
+# VAPELAB Store - Project Knowledge & Instructions
 
 ## Project Overview
-This repository contains **VAPORA (ویپورا)**, a specialized luxury e-commerce platform for vape, pod, and nicotine salt products.
+This repository contains **VAPELAB (ویپ‌لب)**, a specialized luxury e-commerce platform for vape, pod, and nicotine salt products.
 
 ### Architecture
 1. **Storefront (Nuxt 3 / Vue 3 / Vite)**:
@@ -19,6 +19,7 @@ This repository contains **VAPORA (ویپورا)**, a specialized luxury e-comme
    - Located in `/backend` (runs on port 4000 with Swagger at `/api/docs`).
 
 ## Key Guidelines & Conventions
+- **Mobile-First Priority (اولویت قطعی موبایل)**: Mobile view is the #1 design, development, and inspection priority. All UI components, navigation, sheets, and layouts must be optimized and tested for mobile touch screens (375px-500px) first.
 - **No OTP**: Authentication uses username/email + password directly.
 - **Persian UI**: All storefront and admin UI elements support Persian typography (Vazirmatn) and RTL layout.
 - **Educational Comments**: When developing in `/admin`, include Persian comments explaining Angular vs Vue/Nuxt concepts.

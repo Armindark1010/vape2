@@ -150,3 +150,73 @@ export const SparklesIcon: FunctionalComponent<IconProps> = (p) =>
     h("path", { d: "m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z" }),
   ]);
 
+export const SmartphoneIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("rect", { x: "5", y: "2", width: "14", height: "20", rx: "3", ry: "3" }),
+    h("path", { d: "M12 18h.01" }),
+  ]);
+
+export const LockIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("rect", { x: "4", y: "11", width: "16", height: "11", rx: "2", ry: "2" }),
+    h("path", { d: "M7 11V7a5 5 0 0 1 10 0v4" }),
+  ]);
+
+export const KeyIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "m21 2-2 2m-1.5 1.5L14 9l-2-2-4 4 2 2-6 6a3 3 0 0 0 4 4l6-6 2 2 4-4-2-2 3.5-3.5" }),
+    h("circle", { cx: "7.5", cy: "16.5", r: "1.5" }),
+  ]);
+
+export const EyeIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" }),
+    h("circle", { cx: "12", cy: "12", r: "3" }),
+  ]);
+
+export const EyeOffIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "M9.88 9.88a3 3 0 1 0 4.24 4.24" }),
+    h("path", { d: "M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" }),
+    h("path", { d: "M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" }),
+    h("line", { x1: "2", y1: "2", x2: "22", y2: "22" }),
+  ]);
+
+export const InfoIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("circle", { cx: "12", cy: "12", r: "10" }),
+    h("path", { d: "M12 16v-4M12 8h.01" }),
+  ]);
+
+export const EditIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" }),
+    h("path", { d: "m15 5 4 4" }),
+  ]);
+
+export const BoltIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "M13 2 3 14h9l-1 8 10-12h-9l1-8z" }),
+  ]);
+
+export const UserPlusIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" }),
+    h("circle", { cx: "9", cy: "7", r: "4" }),
+    h("line", { x1: "19", y1: "8", x2: "19", y2: "14" }),
+    h("line", { x1: "22", y1: "11", x2: "16", y2: "11" }),
+  ]);
+
+export const BellIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("path", { d: "M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" }),
+    h("path", { d: "M10.3 21a1.94 1.94 0 0 0 3.4 0" }),
+  ]);
+
+export const ClockIcon: FunctionalComponent<IconProps> = (p) =>
+  h("svg", b(p), [
+    h("circle", { cx: "12", cy: "12", r: "10" }),
+    h("path", { d: "M12 6v6l4 2" }),
+  ]);
+
+

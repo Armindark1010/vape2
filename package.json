@@ -1,5 +1,5 @@
 {
-  "name": "vapora",
+  "name": "vapelab",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,7 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "typecheck": "vue-tsc --noEmit",
+    "test:reservation": "node scripts/test-reservation.mjs",
     "next:dev": "next dev",
     "next:build": "next build"
   },

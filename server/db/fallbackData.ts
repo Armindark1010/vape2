@@ -31,7 +31,7 @@ export const FALLBACK_BRANDS: Brand[] = [
   { id: 5, name: "AIR BAR", slug: "airbar", description: "پادهای سبک و خوش‌دست", count: 1 },
   { id: 6, name: "VAPORESSO", slug: "vaporesso", description: "مود و پاد سیستم با تکنولوژی روز", count: 3 },
   { id: 7, name: "NASTY", slug: "nasty", description: "سالت‌های مطرح مالزیایی", count: 1 },
-  { id: 8, name: "VAPORA", slug: "vapora", description: "برند اختصاصی فروشگاه ویپورا", count: 5 },
+  { id: 8, name: "VAPELAB", slug: "vapelab", description: "برند اختصاصی فروشگاه ویپ‌لب", count: 5 },
 ];
 
 export const FALLBACK_PRODUCTS: Product[] = [
@@ -56,7 +56,7 @@ export const FALLBACK_PRODUCTS: Product[] = [
     discountPrice: 990000,
     rating: 4.8,
     reviewCount: 214,
-    stock: 46,
+    stock: 0,
     brand: "ELFBAR",
     brandSlug: "elfbar",
     category: "پاد یک‌بارمصرف",
@@ -190,10 +190,10 @@ export const FALLBACK_PRODUCTS: Product[] = [
   },
   {
     id: 6,
-    slug: "vapora-puff-8000",
-    name: "VAPORA PUFF 8000",
-    tagline: "۸۰۰۰ پاف · برند اختصاصی ویپورا 🏷️",
-    description: "پاد اختصاصی فروشگاه ویپورا با ۸۰۰۰ پاف و بهترین طعم‌های پرفروش بازار، با قیمتی منصفانه‌تر و همان کیفیت اورجینال.",
+    slug: "vapelab-puff-8000",
+    name: "VAPELAB PUFF 8000",
+    tagline: "۸۰۰۰ پاف · برند اختصاصی ویپ‌لب 🏷️",
+    description: "پاد اختصاصی فروشگاه ویپ‌لب با ۸۰۰۰ پاف و بهترین طعم‌های پرفروش بازار، با قیمتی منصفانه‌تر و همان کیفیت اورجینال.",
     specs: {
       options: JSON.stringify({
         flavors: ["انگور یخ", "بلوبری آیس", "هندوانه سرد", "انبه"],
@@ -208,8 +208,8 @@ export const FALLBACK_PRODUCTS: Product[] = [
     rating: 4.6,
     reviewCount: 38,
     stock: 28,
-    brand: "VAPORA",
-    brandSlug: "vapora",
+    brand: "VAPELAB",
+    brandSlug: "vapelab",
     category: "پاد یک‌بارمصرف",
     categorySlug: "pods",
     images: [FALLBACK_IMAGES.B, FALLBACK_IMAGES.D],
@@ -220,10 +220,10 @@ export const FALLBACK_PRODUCTS: Product[] = [
   },
   {
     id: 7,
-    slug: "vapora-salt-30",
-    name: "VAPORA SALT 30ml",
+    slug: "vapelab-salt-30",
+    name: "VAPELAB SALT 30ml",
     tagline: "سالت ۳۰ میل · طعم انگور یخ",
-    description: "سالت اختصاصی ویپورا با ۳۰ میلی‌لیتر حجم و نیکوتین ۳۵/۵۰. ترکیب انگور و سردی نعناع، تجربه‌ای نرم و بی‌خشونت می‌سازد.",
+    description: "سالت اختصاصی ویپ‌لب با ۳۰ میلی‌لیتر حجم و نیکوتین ۳۵/۵۰. ترکیب انگور و سردی نعناع، تجربه‌ای نرم و بی‌خشونت می‌سازد.",
     specs: {
       options: JSON.stringify({
         flavors: ["انگور یخ 🍇", "بلوبری 🫐", "هندوانه", "تنباکو و کارامل", "نعناع"],
@@ -239,8 +239,8 @@ export const FALLBACK_PRODUCTS: Product[] = [
     rating: 4.6,
     reviewCount: 173,
     stock: 80,
-    brand: "VAPORA",
-    brandSlug: "vapora",
+    brand: "VAPELAB",
+    brandSlug: "vapelab",
     category: "سالت نیکوتین",
     categorySlug: "salts",
     images: [FALLBACK_IMAGES.F, FALLBACK_IMAGES.G],

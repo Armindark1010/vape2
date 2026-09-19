@@ -3,12 +3,14 @@ import { db } from "../db";
 import { products } from "../db/schema";
 import { createOrder, validateCoupon, getProducts } from "../db/queries";
 import { FREE_SHIPPING, FLAT_SHIPPING } from "~/utils/vape";
+import { commitReservation } from "../utils/reservation";
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
     const items: { id: number; qty: number }[] = body?.items ?? [];
     const customer = body?.customer;
+    const reservationId = body?.reservationId ? String(body.reservationId) : null;
 
     if (!Array.isArray(items) || items.length === 0) {
       throw createError({ statusCode: 400, message: "Your cart is empty." });

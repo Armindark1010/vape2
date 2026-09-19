@@ -3,6 +3,7 @@ import { ref, computed, useId } from "vue";
 import { useRouter } from "vue-router";
 import type { Product } from "~/types";
 import { useVape } from "~/composables/useVape";
+import { useRestockAlerts } from "~/composables/useRestockAlerts";
 import { money, haptic } from "~/utils/vape";
 import {
   PlusIcon,
@@ -13,6 +14,8 @@ import {
   BagIcon,
   ShieldIcon,
   TruckIcon,
+  BellIcon,
+  CheckIcon,
 } from "~/components/vapor/VIcons";
 
 type Opts = { flavors: string[]; nicotine: string[]; puffs?: string; salt?: boolean };
@@ -24,6 +27,7 @@ const props = defineProps<{
 const router = useRouter();
 const { add, inWish, toggleWish } = useVape();
 const { requireAuth } = useAuth();
+const { isSubscribed, toggleRestock } = useRestockAlerts();
 const qty = ref(1);
 
 const opts = computed<Opts | null>(() => {
@@ -175,19 +179,25 @@ const selectNic = (n: string) => {
     <!-- تعداد -->
     <div class="flex items-center gap-3">
       <span class="text-[12px] font-extrabold text-mist">تعداد</span>
-      <div class="flex h-12 items-center overflow-hidden rounded-2xl border border-white/12" dir="ltr">
+      <div
+        class="flex h-12 items-center overflow-hidden rounded-2xl border border-white/12 transition-opacity"
+        :class="out ? 'opacity-40 pointer-events-none' : ''"
+        dir="ltr"
+      >
         <button
-          class="grid h-full w-12 place-items-center text-snow active:bg-white/8 cursor-pointer"
+          :disabled="out"
+          class="grid h-full w-12 place-items-center text-snow active:bg-white/8 cursor-pointer disabled:cursor-not-allowed"
           aria-label="افزایش"
           @click="qty = Math.min(product.stock, qty + 1)"
         >
           <PlusIcon :size="16" />
         </button>
         <span class="grid h-full w-10 place-items-center text-[15px] font-extrabold text-snow tnum">
-          {{ qty }}
+          {{ out ? 0 : qty }}
         </span>
         <button
-          class="grid h-full w-12 place-items-center text-snow active:bg-white/8 cursor-pointer"
+          :disabled="out"
+          class="grid h-full w-12 place-items-center text-snow active:bg-white/8 cursor-pointer disabled:cursor-not-allowed"
           aria-label="کاهش"
           @click="qty = Math.max(1, qty - 1)"
         >
@@ -208,17 +218,39 @@ const selectNic = (n: string) => {
     </div>
 
     <!-- دکمه‌ها -->
-    <div class="grid grid-cols-2 gap-3">
+    <div v-if="out" class="space-y-3">
+      <!-- دکمه اطلاع‌رسانی یک‌کلیکه از پروفایل -->
       <button
-        :disabled="out"
-        class="pressable flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-vio to-ice text-[14.5px] font-extrabold text-ink glow-v disabled:opacity-50 cursor-pointer"
+        v-if="isSubscribed(product.id)"
+        class="pressable flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl border border-neon/50 bg-neon/15 text-[14.5px] font-extrabold text-neon glow-g cursor-pointer"
+        @click="toggleRestock(product)"
+      >
+        <CheckIcon :size="19" :sw="2.4" />
+        اطلاع‌رسانی موجودی فعال است (کلیک برای لغو)
+      </button>
+
+      <button
+        v-else
+        class="pressable flex h-14 w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-l from-vio via-ice to-neon text-[15px] font-extrabold text-ink glow-v shadow-[0_0_24px_rgba(167,139,250,0.5)] cursor-pointer"
+        @click="toggleRestock(product)"
+      >
+        <BellIcon :size="20" :filled="true" />
+        موجود شد خبرم کن!
+      </button>
+
+      <p class="text-center text-[11.5px] font-medium text-dim">
+        {{ isSubscribed(product.id) ? 'به‌محض شارژ انبار، با پیامک و اعلان مرورگر مطلع خواهید شد.' : 'به‌محض شارژ مجدد در انبار، با پیامک و اعلان به شماره و حساب شما اطلاع می‌دهیم.' }}
+      </p>
+    </div>
+    <div v-else class="grid grid-cols-2 gap-3">
+      <button
+        class="pressable flex h-14 items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-vio to-ice text-[14.5px] font-extrabold text-ink glow-v cursor-pointer"
         @click="addToCart(false)"
       >
         <BagIcon :size="18" :sw="2.2" /> افزودن به سبد
       </button>
       <button
-        :disabled="out"
-        class="pressable flex h-14 items-center justify-center gap-2 rounded-2xl border border-neon/40 bg-neon/10 text-[14.5px] font-extrabold text-neon disabled:opacity-50 cursor-pointer"
+        class="pressable flex h-14 items-center justify-center gap-2 rounded-2xl border border-neon/40 bg-neon/10 text-[14.5px] font-extrabold text-neon cursor-pointer"
         @click="addToCart(true)"
       >
         <ZapIcon :size="18" :sw="2.2" /> خرید فوری

@@ -28,16 +28,26 @@ enum ProductType {
   ACCESSORY
 }
 
+enum AlertStatus {
+  PENDING
+  NOTIFIED
+  CANCELLED
+}
+
 model User {
-  id          String     @id @default(uuid()) @db.Uuid
-  phoneNumber String     @unique
-  fullName    String?
-  role        Role       @default(CUSTOMER)
-  isVerified  Boolean    @default(false)
-  otpCodes    OtpCode[]
-  orders      Order[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id           String         @id @default(uuid()) @db.Uuid
+  phoneNumber  String?        @unique
+  username     String?        @unique
+  passwordHash String?
+  fullName     String?
+  role         Role           @default(CUSTOMER)
+  isVerified   Boolean        @default(false)
+  otpCodes     OtpCode[]
+  cart         Cart?
+  orders       Order[]
+  alerts       ProductAlert[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
   @@map("users")
 }
@@ -89,15 +99,60 @@ model Product {
   flavorProfile    String[]     // e.g. ["Mango", "Ice", "Mint"]
   volume           String?      // e.g. "30ml", "60ml", "10000 Puffs"
 
-  categoryId       String       @db.Uuid
-  category         Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  categoryId       String         @db.Uuid
+  category         Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   orderItems       OrderItem[]
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  cartItems        CartItem[]
+  alerts           ProductAlert[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@index([type])
   @@index([brand])
   @@map("products")
+}
+
+model ProductAlert {
+  id          String      @id @default(uuid()) @db.Uuid
+  productId   String      @db.Uuid
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId      String?     @db.Uuid
+  user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phoneNumber String
+  status      AlertStatus @default(PENDING)
+  createdAt   DateTime    @default(now())
+  notifiedAt  DateTime?
+
+  @@index([productId, status])
+  @@index([phoneNumber])
+  @@map("product_alerts")
+}
+
+model Cart {
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @unique @db.Uuid
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  cartId    String   @db.Uuid
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String   @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  flavor    String?
+  nicotine  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
 }
 
 model Order {

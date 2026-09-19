@@ -128,11 +128,14 @@ export type ShopFilters = {
 };
 
 export type AuthUser = {
-  id: number;
-  name: string;
-  username: string;
-  email: string;
+  id: string | number;
+  name?: string | null;
+  fullName?: string | null;
+  username?: string | null;
+  email?: string | null;
   phone?: string | null;
+  phoneNumber?: string | null;
+  role?: string;
   isAdmin?: boolean;
   createdAt?: string;
 };

@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useVape } from "~/composables/useVape";
 import { useAuth } from "~/composables/useAuth";
+import { useReservation } from "~/composables/useReservation";
 import { money, FREE_SHIPPING, haptic } from "~/utils/vape";
 import {
   ArrowLeftIcon,
@@ -14,8 +15,10 @@ useSeoMeta({
   title: "تکمیل سفارش",
 });
 
-const { cart, cartTotal, clear, ageOk, hydrated } = useVape();
+const { cart, cartTotal, clear, ageOk, hydrated, hasOutOfStockItems, outOfStockItems, revalidateCart, remove } = useVape();
 const { user, isLoggedIn, openAuth } = useAuth();
+const { reservationId, isReserved, isExpired, reserve, release } = useReservation();
+
 const done = ref<string | null>(null);
 const busy = ref(false);
 const err = ref("");
@@ -28,12 +31,31 @@ const f = ref({
   note: "",
 });
 
-onMounted(() => {
+const initCheckout = async () => {
+  await revalidateCart();
   if (user.value) {
     if (!f.value.name && user.value.name) f.value.name = user.value.name;
     if (!f.value.phone && user.value.phone) f.value.phone = user.value.phone;
   }
+  // Auto-reserve inventory for 15 minutes if cart is non-empty
+  if (cart.value.length > 0 && !hasOutOfStockItems.value) {
+    await reserve(cart.value);
+  }
+};
+
+onMounted(() => {
+  initCheckout();
 });
+
+// Watch cart changes: if items are removed/updated, re-reserve
+watch(
+  () => cart.value.length,
+  async (newLen) => {
+    if (newLen > 0 && !hasOutOfStockItems.value) {
+      await reserve(cart.value);
+    }
+  }
+);
 
 const shipping = computed(() =>
   cartTotal.value >= FREE_SHIPPING || cart.value.length === 0 ? 0 : 65000
@@ -52,11 +74,12 @@ const place = async () => {
   busy.value = true;
   err.value = "";
   try {
-    const customerEmail = user.value?.email || `${f.value.phone.trim()}@vapora.local`;
+    const customerEmail = user.value?.email || `${f.value.phone.trim()}@vapelab.local`;
     const d = await $fetch<{ ok: boolean; number: string; error?: string }>("/api/checkout", {
       method: "POST",
       body: {
         items: cart.value.map((c) => ({ id: c.id, qty: c.qty })),
+        reservationId: reservationId.value || undefined,
         couponCode: null,
         customer: {
           name: f.value.name.trim(),
@@ -72,6 +95,7 @@ const place = async () => {
     });
     haptic(20);
     clear();
+    await release();
     done.value = d.number;
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0 });
@@ -95,7 +119,7 @@ const place = async () => {
       <p class="mt-3 text-[13.5px] leading-7 text-mist">
         شماره پیگیری: <strong dir="ltr" class="text-vio">{{ done }}</strong>
         <br />
-        تیم ویپورا به‌زودی برای هماهنگی ارسال باهات تماس می‌گیره.
+        تیم ویپ‌لب به‌زودی برای هماهنگی ارسال باهات تماس می‌گیره.
       </p>
       <div class="mt-8 flex flex-wrap justify-center gap-3">
         <NuxtLink
@@ -141,6 +165,12 @@ const place = async () => {
         <ArrowLeftIcon :size="16" /> بازگشت به سبد
       </NuxtLink>
       <h1 class="font-display text-[26px] font-extrabold text-snow">تکمیل سفارش</h1>
+
+      <!-- نشانگر تایمر و رزرو موجودی انبار -->
+      <div class="mt-4">
+        <ReservationBadge @renewed="revalidateCart" />
+      </div>
+
       <p v-if="!ageOk" class="mt-4 rounded-2xl border border-blush/25 bg-blush/8 px-4 py-3 text-[12.5px] text-blush">
         ⚠️ گیت تأیید سن را کامل نکرده‌اید — برای خرید، ورود شما باید بالای ۱۸ سال باشد.
       </p>
@@ -202,15 +232,52 @@ const place = async () => {
         <!-- خلاصه -->
         <aside class="card-g sticky top-20 rounded-[22px] p-5">
           <h2 class="text-[15px] font-extrabold text-snow">سفارش شما</h2>
+
+          <!-- هشدار کالای ناموجود در سبد -->
+          <div
+            v-if="hasOutOfStockItems"
+            class="mt-3 rounded-2xl border border-blush/40 bg-blush/10 p-3.5 text-[12px] text-blush"
+          >
+            <p class="flex items-center gap-1.5 font-extrabold text-[12.5px]">
+              <span>⚠️</span> کالای ناموجود در سبد خرید
+            </p>
+            <p class="mt-1 text-[11px] leading-5 text-blush/90">
+              یک یا چند کالا در سبد شما ناموجود شده‌اند. لطفاً قبل از ثبت، آن‌ها را از سبد حذف کنید.
+            </p>
+          </div>
+
           <ul class="mt-4 max-h-60 space-y-3 overflow-y-auto">
-            <li v-for="c in cart" :key="c.k" class="flex items-center gap-3">
+            <li
+              v-for="c in cart"
+              :key="c.k"
+              class="flex items-center gap-3 rounded-xl p-1.5 transition-colors"
+              :class="c.stock <= 0 ? 'bg-blush/8 border border-blush/25' : ''"
+            >
               <img :src="c.img" alt="" class="h-14 w-12 rounded-xl object-cover" loading="lazy" />
               <div class="min-w-0 flex-1">
-                <p dir="ltr" class="truncate text-right text-[12.5px] font-extrabold text-snow">{{ c.name }}</p>
-                <p class="text-[10.5px] text-dim tnum">
-                  {{ c.qty }} × {{ money(c.price) }}
-                  <span v-if="c.flavor"> · {{ c.flavor }}</span>
-                </p>
+                <div class="flex items-center justify-between gap-1">
+                  <p dir="ltr" class="truncate text-right text-[12.5px] font-extrabold text-snow">{{ c.name }}</p>
+                  <button
+                    v-if="c.stock <= 0"
+                    type="button"
+                    class="shrink-0 text-[11px] font-bold text-blush underline hover:text-blush/80 cursor-pointer"
+                    @click="remove(c.k)"
+                  >
+                    حذف
+                  </button>
+                </div>
+                <div class="flex items-center gap-2 mt-0.5">
+                  <span
+                    v-if="c.stock <= 0"
+                    class="rounded-md bg-blush/20 px-1.5 py-0.5 text-[10px] font-extrabold text-blush"
+                  >
+                    ناموجود
+                  </span>
+                  <p class="text-[10.5px] text-dim tnum">
+                    {{ c.qty }} × {{ money(c.price) }}
+                    <span v-if="c.flavor"> · {{ c.flavor }}</span>
+                  </p>
+                </div>
               </div>
               <span class="text-[12.5px] font-extrabold text-snow tnum">{{ money(c.price * c.qty) }}</span>
             </li>
@@ -237,10 +304,13 @@ const place = async () => {
           </p>
 
           <button
-            :disabled="busy"
-            class="pressable mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-vio to-ice text-[15px] font-extrabold text-ink glow-v disabled:opacity-60 cursor-pointer"
+            :disabled="busy || hasOutOfStockItems"
+            class="pressable mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-vio to-ice text-[15px] font-extrabold text-ink glow-v disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <span v-if="busy" class="h-5 w-5 animate-spin rounded-full border-2 border-ink border-t-transparent" />
+            <template v-else-if="hasOutOfStockItems">
+              ⚠️ سبد دارای کالای ناموجود است
+            </template>
             <template v-else>
               <ShieldIcon :size="18" :sw="2.2" /> ثبت سفارش — {{ money(total) }}
             </template>

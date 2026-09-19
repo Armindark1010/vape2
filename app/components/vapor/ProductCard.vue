@@ -3,8 +3,9 @@ import { computed } from "vue";
 import type { Product } from "~/types";
 import { useVape } from "~/composables/useVape";
 import { useAuth } from "~/composables/useAuth";
+import { useRestockAlerts } from "~/composables/useRestockAlerts";
 import { money, haptic, CATS_META } from "~/utils/vape";
-import { HeartIcon, PlusIcon, StarIcon } from "~/components/vapor/VIcons";
+import { HeartIcon, PlusIcon, StarIcon, BellIcon, CheckIcon } from "~/components/vapor/VIcons";
 
 const props = withDefaults(
   defineProps<{
@@ -18,6 +19,7 @@ const props = withDefaults(
 
 const { add, inWish, toggleWish } = useVape();
 const { requireAuth } = useAuth();
+const { isSubscribed, toggleRestock } = useRestockAlerts();
 
 const out = computed(() => props.p.stock <= 0);
 const price = computed(() => props.p.discountPrice ?? props.p.price);
@@ -118,14 +120,28 @@ const onAdd = () => {
             <p class="text-[13.5px] font-extrabold text-snow tnum">{{ money(price) }}</p>
             <p v-if="p.discountPrice != null" class="text-[10.5px] text-dim line-through tnum">{{ money(p.price) }}</p>
           </div>
+
+          <!-- دکمه اطلاع‌رسانی موجودی در صورت ناموجود بودن -->
           <button
-            :disabled="out"
-            class="pressable grid h-12 w-12 shrink-0 place-items-center rounded-2xl transition-all duration-300 cursor-pointer"
+            v-if="out"
+            class="pressable grid h-12 w-12 shrink-0 place-items-center rounded-2xl transition-all duration-300 cursor-pointer border shadow-sm"
             :class="[
-              out
-                ? 'bg-white/6 text-dim'
-                : 'bg-gradient-to-br from-vio to-ice text-ink shadow-[0_6px_22px_-6px_rgba(167,139,250,0.65)]',
+              isSubscribed(p.id)
+                ? 'bg-neon/15 text-neon border-neon/40 shadow-[0_0_14px_rgba(74,222,128,0.3)]'
+                : 'bg-vio/20 text-vio border-vio/40 hover:bg-vio/30 shadow-[0_0_14px_rgba(167,139,250,0.3)]',
             ]"
+            :aria-label="isSubscribed(p.id) ? 'اطلاع‌رسانی موجودی فعال است' : `موجود شد خبرم کن: ${p.name}`"
+            :title="isSubscribed(p.id) ? 'اطلاع‌رسانی موجودی فعال است' : 'موجود شد خبرم کن'"
+            @click.stop.prevent="toggleRestock(p)"
+          >
+            <CheckIcon v-if="isSubscribed(p.id)" :size="20" :sw="2.4" />
+            <BellIcon v-else :size="20" :filled="true" />
+          </button>
+
+          <!-- دکمه افزودن به سبد در صورت موجود بودن -->
+          <button
+            v-else
+            class="pressable grid h-12 w-12 shrink-0 place-items-center rounded-2xl transition-all duration-300 cursor-pointer bg-gradient-to-br from-vio to-ice text-ink shadow-[0_6px_22px_-6px_rgba(167,139,250,0.65)]"
             :aria-label="`افزودن ${p.name} به سبد`"
             @click="onAdd"
           >

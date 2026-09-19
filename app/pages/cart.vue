@@ -15,7 +15,7 @@ useSeoMeta({
   title: "سبد خرید",
 });
 
-const { cart, cartTotal, setQty, remove, hydrated } = useVape();
+const { cart, cartTotal, setQty, remove, hydrated, hasOutOfStockItems } = useVape();
 const code = ref("");
 const msg = ref<{ ok: boolean; t: string } | null>(null);
 const coupon = ref<{ code: string; percent: number } | null>(null);
@@ -121,22 +121,39 @@ const decrement = (k: string, currentQty: number) => {
                 <TrashIcon :size="17" />
               </button>
             </div>
-            <div class="mt-auto flex h-11 w-fit items-center overflow-hidden rounded-2xl border border-white/12 pt-0" dir="ltr">
-              <button
-                class="grid h-full w-11 place-items-center text-snow active:bg-white/8 cursor-pointer"
-                aria-label="افزایش"
-                @click="increment(c.k, c.qty)"
+            <div class="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
+              <div class="flex h-11 w-fit items-center overflow-hidden rounded-2xl border border-white/12 pt-0" dir="ltr">
+                <button
+                  :disabled="c.stock <= 0 || c.qty >= c.stock"
+                  class="grid h-full w-11 place-items-center text-snow active:bg-white/8 cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
+                  aria-label="افزایش"
+                  @click="increment(c.k, c.qty)"
+                >
+                  <PlusIcon :size="15" />
+                </button>
+                <span class="grid h-full w-10 place-items-center text-[14px] font-extrabold text-snow tnum">{{ c.qty }}</span>
+                <button
+                  class="grid h-full w-11 place-items-center text-snow active:bg-white/8 cursor-pointer"
+                  aria-label="کاهش"
+                  @click="decrement(c.k, c.qty)"
+                >
+                  <MinusIcon :size="15" />
+                </button>
+              </div>
+
+              <!-- وضعیت انبار کالا -->
+              <span
+                v-if="c.stock <= 0"
+                class="rounded-xl border border-blush/30 bg-blush/10 px-2.5 py-1 text-[11px] font-extrabold text-blush"
               >
-                <PlusIcon :size="15" />
-              </button>
-              <span class="grid h-full w-10 place-items-center text-[14px] font-extrabold text-snow tnum">{{ c.qty }}</span>
-              <button
-                class="grid h-full w-11 place-items-center text-snow active:bg-white/8 cursor-pointer"
-                aria-label="کاهش"
-                @click="decrement(c.k, c.qty)"
+                ناموجود در انبار
+              </span>
+              <span
+                v-else-if="c.qty >= c.stock"
+                class="text-[11px] font-bold text-gold"
               >
-                <MinusIcon :size="15" />
-              </button>
+                حداکثر موجودی ({{ c.stock }} عدد)
+              </span>
             </div>
           </div>
         </li>
@@ -151,7 +168,7 @@ const decrement = (k: string, currentQty: number) => {
           <input
             id="cp"
             v-model="code"
-            placeholder="کد تخفیف (VAPORA15)"
+            placeholder="کد تخفیف (VAPELAB15)"
             dir="ltr"
             class="input h-12 flex-1 text-center text-[13px] font-bold"
           />
@@ -194,12 +211,26 @@ const decrement = (k: string, currentQty: number) => {
           </div>
         </dl>
 
+        <div
+          v-if="hasOutOfStockItems"
+          class="mt-4 rounded-xl border border-blush/30 bg-blush/10 p-3 text-[12px] text-blush"
+        >
+          ⚠️ یک یا چند کالا در سبد شما ناموجود است. برای ادامه لطفاً آن‌ها را حذف کنید.
+        </div>
+
         <NuxtLink
+          v-if="!hasOutOfStockItems"
           to="/checkout"
           class="pressable mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-vio to-ice text-[15px] font-extrabold text-ink glow-v"
         >
           ادامه و پرداخت <ArrowLeftIcon :size="18" :sw="2.4" />
         </NuxtLink>
+        <div
+          v-else
+          class="mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white/10 text-[14px] font-extrabold text-mist opacity-60 cursor-not-allowed"
+        >
+          سبد دارای کالای ناموجود است
+        </div>
         <p class="mt-3 text-center text-[10.5px] text-dim">پرداخت در محل (تهران) · ضمانت اصالت کالا</p>
       </aside>
     </div>

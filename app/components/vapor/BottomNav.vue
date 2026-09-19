@@ -13,6 +13,7 @@ import {
   CloseIcon,
   DropletIcon,
 } from "~/components/vapor/VIcons";
+import VapeLogo from "~/components/vapor/VapeLogo.vue";
 
 type Hit = { id: number; slug: string; name: string; price: number; image: string; tagline: string | null };
 
@@ -115,10 +116,8 @@ const onItemClick = (it: (typeof items)[0]) => {
     <!-- هدر دسکتاپ -->
     <header class="glass sticky top-0 z-50 hidden border-b border-white/8 lg:block">
       <div class="wrap flex h-16 items-center justify-between">
-        <NuxtLink to="/" class="flex items-center gap-2.5" aria-label="ویپورا">
-          <span class="text-vio"><DropletIcon :size="22" /></span>
-          <span dir="ltr" class="font-extrabold tracking-[0.3em] text-snow">{{ SITE.latin }}</span>
-          <span class="rounded-full bg-vio/15 px-2.5 py-1 text-[10px] font-bold text-vio">ویپ و سالت</span>
+        <NuxtLink to="/" class="flex items-center transition-opacity hover:opacity-90" aria-label="ویپ‌لب">
+          <VapeLogo variant="horizontal" height="36" />
         </NuxtLink>
         <nav class="flex items-center gap-8 text-[13px] font-semibold text-mist">
           <NuxtLink to="/" class="hover:text-snow">خانه</NuxtLink>
@@ -167,6 +166,35 @@ const onItemClick = (it: (typeof items)[0]) => {
             <span>ورود / عضویت</span>
           </button>
         </div>
+      </div>
+    </header>
+
+    <!-- هدر بالای موبایل با لوگو -->
+    <header class="glass sticky top-0 z-40 flex h-14 items-center justify-between border-b border-white/8 px-4 lg:hidden">
+      <NuxtLink to="/" class="flex items-center transition-opacity hover:opacity-90" aria-label="ویپ‌لب">
+        <VapeLogo variant="horizontal" height="28" />
+      </NuxtLink>
+      <div class="flex items-center gap-2">
+        <button
+          class="pressable grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-mist"
+          aria-label="جستجو"
+          @click="searchOpen = true"
+        >
+          <SearchIcon :size="17" />
+        </button>
+        <button
+          class="pressable relative grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-snow"
+          :aria-label="`سبد خرید (${cartCount})`"
+          @click="setCartOpen(true)"
+        >
+          <BagIcon :size="17" />
+          <span
+            v-if="cartCount > 0"
+            class="absolute -top-1 -left-1 grid h-4 min-w-4 place-items-center rounded-full bg-gradient-to-l from-neon to-ice px-0.5 text-[9px] font-extrabold text-ink"
+          >
+            {{ cartCount }}
+          </span>
+        </button>
       </div>
     </header>
 

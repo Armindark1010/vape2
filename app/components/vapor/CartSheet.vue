@@ -11,7 +11,7 @@ import {
   ArrowLeftIcon,
 } from "~/components/vapor/VIcons";
 
-const { cartOpen, setCartOpen, cart, cartTotal, cartCount, setQty, remove, hydrated } = useVape();
+const { cartOpen, setCartOpen, cart, cartTotal, cartCount, setQty, remove, hydrated, hasOutOfStockItems } = useVape();
 
 const remaining = computed(() => FREE_SHIPPING - cartTotal.value);
 const progress = computed(() => Math.min(100, (cartTotal.value / FREE_SHIPPING) * 100));
@@ -117,7 +117,8 @@ const goToCheckout = () => {
             <div class="mt-auto flex items-center justify-between pt-2">
               <div class="flex h-9 items-center overflow-hidden rounded-xl border border-white/12" dir="ltr">
                 <button
-                  class="grid h-full w-9 place-items-center text-snow active:bg-white/8 cursor-pointer"
+                  :disabled="c.stock <= 0 || c.qty >= c.stock"
+                  class="grid h-full w-9 place-items-center text-snow active:bg-white/8 cursor-pointer disabled:cursor-not-allowed disabled:opacity-30"
                   aria-label="افزایش تعداد"
                   @click="increment(c.k, c.qty)"
                 >
@@ -140,11 +141,19 @@ const goToCheckout = () => {
 
       <!-- جمع و دکمه -->
       <div class="border-t border-white/8 px-5 pt-4 pb-4">
+        <div
+          v-if="hasOutOfStockItems"
+          class="mb-3 rounded-xl border border-blush/30 bg-blush/10 p-2.5 text-[11.5px] text-blush"
+        >
+          ⚠️ کالای ناموجود در سبد شما وجود دارد.
+        </div>
+
         <div class="mb-4 flex items-center justify-between">
           <span class="text-[13px] text-mist">جمع کل</span>
           <span class="text-[17px] font-extrabold text-snow tnum">{{ money(cartTotal) }}</span>
         </div>
         <NuxtLink
+          v-if="!hasOutOfStockItems"
           to="/checkout"
           class="pressable flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-vio to-ice text-[15px] font-extrabold text-ink glow-v"
           @click="goToCheckout"
@@ -152,6 +161,12 @@ const goToCheckout = () => {
           ادامه خرید و پرداخت
           <ArrowLeftIcon :size="17" :sw="2.4" />
         </NuxtLink>
+        <div
+          v-else
+          class="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white/10 text-[14px] font-extrabold text-mist opacity-60 cursor-not-allowed"
+        >
+          کالای ناموجود در سبد
+        </div>
         <p class="mt-3 text-center text-[10.5px] text-dim">
           پرداخت در محل برای تهران فعال است · کالا ۱۰۰٪ اورجینال
         </p>

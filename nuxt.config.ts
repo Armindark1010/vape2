@@ -3,6 +3,12 @@ export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
   devtools: { enabled: false },
 
+  devServer: {
+    https: true,
+    port: 3001,
+    host: '0.0.0.0',
+  },
+
   future: {
     compatibilityVersion: 4,
   },
@@ -21,8 +27,8 @@ export default defineNuxtConfig({
         lang: "fa",
         dir: "rtl",
       },
-      title: "ویپورا | فروشگاه تخصصی ویپ، سالت و پاد — دودِ نرم، طعمِ ناب",
-      titleTemplate: "%s | ویپورا",
+      title: "ویپ‌لب | فروشگاه تخصصی ویپ، سالت و پاد — دودِ نرم، طعمِ ناب",
+      titleTemplate: "%s | ویپ‌لب (VAPELAB)",
       meta: [
         { charset: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
@@ -30,11 +36,11 @@ export default defineNuxtConfig({
         {
           name: "description",
           content:
-            "فروشگاه تخصصی ویپورا — خرید آنلاین پاد یک‌بارمصرف، سالت نیکوتین، مود و لوازم جانبی اصل با هولوگرام. ارسال فوری تهران، پرداخت در محل، ضمانت اصالت کالا.",
+            "فروشگاه تخصصی ویپ‌لب (VAPELAB) — خرید آنلاین پاد یک‌بارمصرف، سالت نیکوتین، مود و لوازم جانبی اصل با هولوگرام. ارسال فوری تهران، پرداخت در محل، ضمانت اصالت کالا.",
         },
         { property: "og:type", content: "website" },
         { property: "og:locale", content: "fa_IR" },
-        { property: "og:title", content: "ویپورا — دودِ نرم، طعمِ ناب" },
+        { property: "og:title", content: "ویپ‌لب — دودِ نرم، طعمِ ناب" },
         {
           property: "og:description",
           content: "پاد یک‌بارمصرف، سالت نیکوتین و مود اصل با ضمانت اصالت و ارسال فوری.",
@@ -54,8 +60,17 @@ export default defineNuxtConfig({
         },
         {
           rel: "icon",
+          type: "image/png",
+          href: "/favicon.png",
+        },
+        {
+          rel: "icon",
           type: "image/svg+xml",
-          href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='7' fill='%2309090b'/%3E%3Cpath d='M12 4.5s5.2 5.4 5.2 9.2a5.2 5.2 0 0 1-10.4 0C6.8 9.9 12 4.5 12 4.5Z' fill='%23a78bfa'/%3E%3C/svg%3E",
+          href: "/favicon.svg",
+        },
+        {
+          rel: "apple-touch-icon",
+          href: "/favicon.png",
         },
       ],
       script: [

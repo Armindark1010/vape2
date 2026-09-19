@@ -2,15 +2,22 @@ import { ref, computed } from "vue";
 import type { AuthUser } from "~/types";
 import { useVape } from "./useVape";
 
+// Global singleton reactive state
 const user = ref<AuthUser | null>(null);
 const token = ref<string | null>(null);
 const authModalOpen = ref(false);
 const authMode = ref<"login" | "register">("login");
+const authTab = ref<"otp" | "password">("otp");
+const otpStep = ref<"phone" | "code">("phone");
+const otpPhone = ref("");
 const authReason = ref<string | null>(null);
 const pendingAction = ref<(() => void) | null>(null);
 const loading = ref(false);
 const authError = ref<string | null>(null);
 const hydrated = ref(false);
+
+const STORAGE_USER_KEY = "vapelab.auth.user";
+const STORAGE_TOKEN_KEY = "vapelab.auth.token";
 
 export function useAuth() {
   const { toast } = useVape();
@@ -18,8 +25,14 @@ export function useAuth() {
   const init = () => {
     if (typeof window === "undefined" || hydrated.value) return;
     try {
-      const savedUser = localStorage.getItem("vapora.auth.user");
-      const savedToken = localStorage.getItem("vapora.auth.token");
+      // Check current or legacy storage keys
+      const savedUser =
+        localStorage.getItem(STORAGE_USER_KEY) ||
+        localStorage.getItem("vapora.auth.user");
+      const savedToken =
+        localStorage.getItem(STORAGE_TOKEN_KEY) ||
+        localStorage.getItem("vapora.auth.token");
+
       if (savedUser) {
         user.value = JSON.parse(savedUser) as AuthUser;
       }
@@ -37,14 +50,17 @@ export function useAuth() {
     init();
   }
 
-  const isLoggedIn = computed(() => !!user.value);
+  const isLoggedIn = computed(() => !!user.value && !!token.value);
 
   const openAuth = (
     mode: "login" | "register" = "login",
     reason?: string,
-    onSuccess?: () => void
+    onSuccess?: () => void,
+    defaultTab: "otp" | "password" = "otp"
   ) => {
     authMode.value = mode;
+    authTab.value = defaultTab;
+    otpStep.value = "phone";
     authReason.value = reason || null;
     authError.value = null;
     if (onSuccess) {
@@ -57,11 +73,22 @@ export function useAuth() {
     authModalOpen.value = false;
     authReason.value = null;
     authError.value = null;
+    otpStep.value = "phone";
+  };
+
+  const setAuthTab = (tab: "otp" | "password") => {
+    authTab.value = tab;
+    authError.value = null;
+  };
+
+  const setAuthMode = (mode: "login" | "register") => {
+    authMode.value = mode;
+    authError.value = null;
   };
 
   /**
    * Helper: اگر کاربر لاگین بود اکشن را اجرا می‌کند؛
-   * اگر لاگین نبود، مودال لاگین را باز می‌کند و پس از لاگین موفق، خودکار اکشن را انجام می‌دهد.
+   * در غیر این صورت مودال ورود را باز کرده و پس از ورود، خودکار اکشن را انجام می‌دهد.
    */
   const requireAuth = (
     action: () => void,
@@ -70,17 +97,22 @@ export function useAuth() {
     if (isLoggedIn.value) {
       action();
     } else {
-      openAuth("login", reason, action);
+      openAuth("login", reason, action, "otp");
     }
   };
 
   const handleSuccess = (userData: AuthUser, userToken: string, successMsg: string) => {
     user.value = userData;
     token.value = userToken;
+
     if (typeof window !== "undefined") {
-      localStorage.setItem("vapora.auth.user", JSON.stringify(userData));
-      localStorage.setItem("vapora.auth.token", userToken);
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(userData));
+      localStorage.setItem(STORAGE_TOKEN_KEY, userToken);
+      // Clean legacy key
+      localStorage.removeItem("vapora.auth.user");
+      localStorage.removeItem("vapora.auth.token");
     }
+
     toast(successMsg, "ok");
     closeAuth();
 
@@ -92,18 +124,123 @@ export function useAuth() {
     }
   };
 
-  const login = async (credentials: { username: string; password: string }) => {
+  /**
+   * 1. Send OTP to mobile phone
+   */
+  const sendOtp = async (phoneNumber: string) => {
     loading.value = true;
     authError.value = null;
     try {
-      const res = await $fetch<{ user: AuthUser; token: string }>("/api/auth/login", {
+      const res = await $fetch<{
+        success: boolean;
+        message: string;
+        phoneNumber: string;
+        debugCode?: string;
+      }>("/api/v1/auth/send-otp", {
         method: "POST",
-        body: credentials,
+        body: { phoneNumber },
       });
-      handleSuccess(res.user, res.token, `خوش آمدید، ${res.user.name || res.user.username} 👋`);
+
+      otpPhone.value = res.phoneNumber || phoneNumber;
+      otpStep.value = "code";
+
+      if (res.debugCode) {
+        toast(`کد تایید ارسال شد (کد تست: ${res.debugCode})`, "ok");
+      } else {
+        toast(res.message || "کد تأیید ارسال شد", "ok");
+      }
+      return { success: true, debugCode: res.debugCode };
+    } catch (err: any) {
+      const msg =
+        err?.data?.message ||
+        err?.data?.statusMessage ||
+        "خطا در ارسال پیامک تأیید. لطفاً شماره موبایل را بررسی کنید";
+      authError.value = Array.isArray(msg) ? msg.join("، ") : msg;
+      toast(authError.value || "خطا در ارسال پیامک", "err");
+      return { success: false, error: authError.value };
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 2. Verify OTP code (Supports test code "11111")
+   */
+  const loginWithOtp = async (phoneNumber: string, code: string) => {
+    loading.value = true;
+    authError.value = null;
+    try {
+      const res = await $fetch<{
+        accessToken: string;
+        user: AuthUser;
+      }>("/api/v1/auth/verify-otp", {
+        method: "POST",
+        body: { phoneNumber, code },
+      });
+
+      const displayName =
+        res.user.fullName ||
+        res.user.name ||
+        res.user.username ||
+        res.user.phoneNumber ||
+        "کاربر عزیز";
+
+      handleSuccess(
+        res.user,
+        res.accessToken,
+        `خوش آمدید، ${displayName} 👋`
+      );
       return true;
     } catch (err: any) {
-      authError.value = err?.data?.statusMessage || err?.data?.message || "نام کاربری یا رمز عبور اشتباه است";
+      const msg =
+        err?.data?.message ||
+        err?.data?.statusMessage ||
+        "کد وارد شده نامعتبر یا منقضی شده است";
+      authError.value = Array.isArray(msg) ? msg.join("، ") : msg;
+      toast(authError.value || "کد تایید اشتباه است", "err");
+      return false;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  /**
+   * 3. Login with username or mobile and password
+   */
+  const loginWithPassword = async (
+    usernameOrMobile: string,
+    password: string
+  ) => {
+    loading.value = true;
+    authError.value = null;
+    try {
+      const res = await $fetch<{
+        accessToken: string;
+        user: AuthUser;
+      }>("/api/v1/auth/login-password", {
+        method: "POST",
+        body: { usernameOrMobile, password },
+      });
+
+      const displayName =
+        res.user.fullName ||
+        res.user.name ||
+        res.user.username ||
+        res.user.phoneNumber ||
+        usernameOrMobile;
+
+      handleSuccess(
+        res.user,
+        res.accessToken,
+        `خوش آمدید، ${displayName} 👋`
+      );
+      return true;
+    } catch (err: any) {
+      const msg =
+        err?.data?.message ||
+        err?.data?.statusMessage ||
+        "نام کاربری یا رمز عبور اشتباه است";
+      authError.value = Array.isArray(msg) ? msg.join("، ") : msg;
       toast(authError.value || "خطا در ورود", "err");
       return false;
     } finally {
@@ -111,24 +248,37 @@ export function useAuth() {
     }
   };
 
+  /**
+   * 4. Register new user with username or mobile and password
+   */
   const register = async (payload: {
-    name: string;
-    username: string;
-    email: string;
-    phone?: string;
+    usernameOrMobile: string;
     password: string;
+    fullName?: string;
   }) => {
     loading.value = true;
     authError.value = null;
     try {
-      const res = await $fetch<{ user: AuthUser; token: string }>("/api/auth/register", {
+      const res = await $fetch<{
+        accessToken: string;
+        user: AuthUser;
+      }>("/api/v1/auth/register", {
         method: "POST",
         body: payload,
       });
-      handleSuccess(res.user, res.token, `ثبت‌نام شما با موفقیت انجام شد 🎉`);
+
+      handleSuccess(
+        res.user,
+        res.accessToken,
+        "ثبت‌نام شما در ویپ‌لب با موفقیت انجام شد 🎉"
+      );
       return true;
     } catch (err: any) {
-      authError.value = err?.data?.statusMessage || err?.data?.message || "خطا در ثبت‌نام؛ لطفاً اطلاعات را بررسی کنید";
+      const msg =
+        err?.data?.message ||
+        err?.data?.statusMessage ||
+        "خطا در ثبت‌نام کاربر";
+      authError.value = Array.isArray(msg) ? msg.join("، ") : msg;
       toast(authError.value || "خطا در ثبت‌نام", "err");
       return false;
     } finally {
@@ -136,14 +286,21 @@ export function useAuth() {
     }
   };
 
+  /**
+   * Backward-compatible login method
+   */
+  const login = async (credentials: { username: string; password: string }) => {
+    return loginWithPassword(credentials.username, credentials.password);
+  };
+
   const logout = () => {
     user.value = null;
     token.value = null;
     if (typeof window !== "undefined") {
-      localStorage.removeItem("vapora.auth.user");
-      localStorage.removeItem("vapora.auth.token");
+      localStorage.removeItem(STORAGE_USER_KEY);
+      localStorage.removeItem(STORAGE_TOKEN_KEY);
     }
-    toast("از حساب کاربری خارج شدید");
+    toast("با موفقیت خارج شدید", "ok");
   };
 
   return {
@@ -152,15 +309,23 @@ export function useAuth() {
     isLoggedIn,
     authModalOpen,
     authMode,
+    authTab,
+    otpStep,
+    otpPhone,
     authReason,
     loading,
     authError,
     openAuth,
     closeAuth,
+    setAuthTab,
+    setAuthMode,
     requireAuth,
-    login,
+    sendOtp,
+    verifyOtp: loginWithOtp,
+    loginWithOtp,
+    loginWithPassword,
     register,
+    login,
     logout,
-    init,
   };
 }

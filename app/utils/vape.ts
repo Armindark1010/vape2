@@ -1,12 +1,12 @@
 export const SITE = {
-  name: "ویپورا",
-  latin: "VAPORA",
+  name: "ویپ‌لب",
+  latin: "VAPELAB",
   tagline: "دودِ نرم، طعمِ ناب",
-  domain: "https://vapora.example.com",
+  domain: "https://vapelab.ir",
   phone: "۰۲۱-۹۱۰۰۲۲۳۳",
 };
 
-export const AGE_KEY = "vapora.age.ok";
+export const AGE_KEY = "vapelab.age.ok";
 export const FREE_SHIPPING = 2_000_000; // تومان
 export const FLAT_SHIPPING = 65_000; // تومان
 
@@ -37,7 +37,7 @@ export const CATS_META: Record<
   gear: { label: "لوازم جانبی", emoji: "🧰", tint: "blush", sub: "کویل، چارجر و کیس" },
 };
 
-export const BRANDS_LINE = ["ELFBAR", "VOZOL", "LOST MARY", "IGET", "VAPORESSO", "AIR BAR", "NASTY", "VAPORA"];
+export const BRANDS_LINE = ["ELFBAR", "VOZOL", "LOST MARY", "IGET", "VAPORESSO", "AIR BAR", "NASTY", "VAPELAB"];
 
 export const TRUST = [
   { t: "ضمانت اصالت", s: "اسکن هولوگرام برند" },
@@ -63,7 +63,7 @@ export const PROMO_IMG =
 
 export const DEMO_USER = {
   name: "آرمان رضایی",
-  email: "demo@vapora.ir",
+  email: "demo@vapelab.ir",
   phone: "۰۹۱۲ ۳۴۵ ۶۷۸۹",
   joined: "اردیبهشت ۱۴۰۳",
 };

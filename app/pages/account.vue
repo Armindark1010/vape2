@@ -193,7 +193,7 @@ const labelFa: Record<string, string> = {
               </ul>
               <div class="mt-3 flex items-center justify-between border-t border-white/8 pt-3">
                 <span class="text-[11px] text-dim">
-                  {{ o.status === 'delivered' ? 'تحویل موفق — ممنون که با ویپورا بودی 💜' : 'در حال پیگیری توسط تیم ارسال' }}
+                  {{ o.status === 'delivered' ? 'تحویل موفق — ممنون که با ویپ‌لب بودی 💜' : 'در حال پیگیری توسط تیم ارسال' }}
                 </span>
                 <span class="text-[14px] font-extrabold text-neon tnum">{{ money(o.total) }}</span>
               </div>
@@ -206,7 +206,7 @@ const labelFa: Record<string, string> = {
     <!-- راهنما -->
     <div class="card-g mt-8 rounded-[22px] p-6">
       <h2 class="flex items-center gap-2 text-[15px] font-extrabold text-snow">
-        <CheckIcon :size="18" class="text-neon" /> چرا ویپورا؟
+        <CheckIcon :size="18" class="text-neon" /> چرا ویپ‌لب؟
       </h2>
       <p class="mt-3 text-[12.5px] leading-7 text-dim">
         {{ SITE.name }} فقط کالای اورجینال با هولوگرام اصالت می‌فروشد؛ اگر بعد از اسکن هولوگرام مطمئن نشدی، تا ۷ روز می‌تونی

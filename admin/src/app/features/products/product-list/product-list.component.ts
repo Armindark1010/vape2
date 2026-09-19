@@ -166,6 +166,16 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 
                   <!-- دکمه‌های عملیات -->
                   <td class="actions-cell">
+                    <!-- دکمه ارسال پیامک اطلاع‌رسانی موجودی -->
+                    <button
+                      *ngIf="authService.isFullAdmin()"
+                      (click)="openSmsModal(p)"
+                      class="action-btn sms-btn"
+                      [class.highlight]="p.stock === 0"
+                      title="ارسال پیامک اطلاع‌رسانی به کاربران منتظر"
+                    >
+                      📲 پیامک موجودی
+                    </button>
                     <a [routerLink]="['/products/edit', p.id]" class="action-btn edit-btn" title="ویرایش محصول">
                       ✏️ ویرایش
                     </a>
@@ -201,7 +211,14 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
               </div>
 
               <div class="mob-actions">
-                <a [routerLink]="['/products/edit', p.id]" class="mob-btn edit">✏️ ویرایش مشخصات و موجودی</a>
+                <button
+                  *ngIf="authService.isFullAdmin()"
+                  (click)="openSmsModal(p)"
+                  class="mob-btn sms"
+                >
+                  📲 ارسال پیامک موجودی
+                </button>
+                <a [routerLink]="['/products/edit', p.id]" class="mob-btn edit">✏️ ویرایش</a>
                 <button
                   *ngIf="authService.isFullAdmin()"
                   (click)="confirmDelete(p)"
@@ -212,6 +229,56 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
               </div>
             </div>
           }
+        </div>
+
+        <!-- مدال ارسال دستی پیامک کاوه‌نگار -->
+        <div *ngIf="activeSmsProduct()" class="sms-modal-backdrop" (click)="closeSmsModal()">
+          <div class="sms-modal glass-card" (click)="$event.stopPropagation()">
+            <div class="modal-header">
+              <h3>📲 ارسال پیامک اطلاع‌رسانی موجودی</h3>
+              <button class="close-btn" (click)="closeSmsModal()">✕</button>
+            </div>
+
+            <div class="modal-body">
+              <p class="product-title-info">
+                محصول: <strong>{{ activeSmsProduct()?.name }}</strong>
+              </p>
+
+              <div class="stats-box">
+                <div class="stat-item">
+                  <span class="stat-val font-mono">{{ smsStats()?.pendingCount ?? 0 }}</span>
+                  <span class="stat-lbl">کاربر در انتظار پیامک</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-val font-mono text-neon">{{ smsStats()?.notifiedCount ?? 0 }}</span>
+                  <span class="stat-lbl">پیامک ارسال شده قبلی</span>
+                </div>
+              </div>
+
+              <div *ngIf="smsSuccessMsg()" class="success-alert">
+                ✓ {{ smsSuccessMsg() }}
+              </div>
+
+              <div class="msg-preview">
+                <label class="msg-lbl">پیش‌نمایش پیامک ارسالی کاوه‌نگار:</label>
+                <div class="sms-bubble">
+                  ویپ‌لب: کالای «{{ activeSmsProduct()?.name }}» که منتظرش بودید در انبار موجود شد!
+                  خرید سریع: vapelab.ir/product/{{ activeSmsProduct()?.slug }}
+                </div>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <button class="btn-cancel" (click)="closeSmsModal()">انصراف</button>
+              <button
+                class="btn-send-sms"
+                [disabled]="isSendingSms() || (smsStats()?.pendingCount ?? 0) === 0"
+                (click)="confirmSendSms()"
+              >
+                {{ isSendingSms() ? 'در حال ارسال پیامک...' : 'تأیید و ارسال پیامک به کاربران' }}
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- صفحه‌بندی (Pagination) -->
@@ -460,6 +527,121 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
           border-color: rgba(244, 63, 94, 0.3);
           &:hover { background: rgba(244, 63, 94, 0.2); }
         }
+
+        &.sms-btn {
+          background: rgba(167, 139, 250, 0.12);
+          color: var(--color-primary);
+          border-color: rgba(167, 139, 250, 0.3);
+          &:hover { background: rgba(167, 139, 250, 0.25); }
+          &.highlight {
+            background: rgba(244, 63, 94, 0.15);
+            color: #f43f5e;
+            border-color: rgba(244, 63, 94, 0.4);
+            animation: pulse-border 2s infinite;
+          }
+        }
+      }
+    }
+
+    .sms-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+    }
+
+    .sms-modal {
+      width: 100%;
+      max-width: 480px;
+      padding: 1.5rem;
+      border-radius: var(--radius-lg);
+      background: #12131a;
+      border: 1px solid rgba(167, 139, 250, 0.3);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+
+      .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        h3 { font-size: 16px; font-weight: 800; color: var(--text-main); margin: 0; }
+        .close-btn { background: none; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; }
+      }
+
+      .modal-body {
+        .product-title-info { font-size: 13.5px; color: var(--text-main); margin-bottom: 1rem; }
+        .stats-box {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+          margin-bottom: 1.2rem;
+          .stat-item {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 0.8rem;
+            text-align: center;
+            .stat-val { font-size: 20px; font-weight: 800; display: block; color: var(--color-ice); }
+            .stat-lbl { font-size: 11px; color: var(--text-dim); margin-top: 4px; display: block; }
+          }
+        }
+        .success-alert {
+          background: rgba(74, 222, 128, 0.15);
+          border: 1px solid #4ade80;
+          color: #4ade80;
+          padding: 8px 12px;
+          border-radius: var(--radius-sm);
+          font-size: 12.5px;
+          font-weight: 700;
+          margin-bottom: 1rem;
+        }
+        .msg-preview {
+          .msg-lbl { font-size: 12px; color: var(--text-dim); font-weight: 700; margin-bottom: 6px; display: block; }
+          .sms-bubble {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+            font-size: 12px;
+            line-height: 1.7;
+            color: var(--text-main);
+          }
+        }
+      }
+
+      .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+
+        .btn-cancel {
+          padding: 8px 16px;
+          background: transparent;
+          border: 1px solid var(--border-subtle);
+          color: var(--text-dim);
+          border-radius: var(--radius-sm);
+          font-size: 12.5px;
+          cursor: pointer;
+        }
+
+        .btn-send-sms {
+          padding: 8px 18px;
+          background: linear-gradient(135deg, #a78bfa, #38bdf8);
+          border: none;
+          color: #0b0c10;
+          font-weight: 800;
+          font-size: 12.5px;
+          border-radius: var(--radius-sm);
+          cursor: pointer;
+          &:disabled { opacity: 0.5; cursor: not-allowed; }
+        }
       }
     }
 
@@ -561,6 +743,12 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
               border: 1px solid rgba(56, 189, 248, 0.25);
             }
 
+            &.sms {
+              background: rgba(167, 139, 250, 0.15);
+              color: var(--color-primary);
+              border: 1px solid rgba(167, 139, 250, 0.3);
+            }
+
             &.delete {
               width: 44px;
               background: rgba(244, 63, 94, 0.12);
@@ -598,13 +786,13 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
         gap: 6px;
 
         .page-nav-btn, .page-num-btn {
-          padding: 5px 12px;
+          padding: 6px 12px;
+          font-size: 12px;
+          border-radius: var(--radius-sm);
           background: rgba(255, 255, 255, 0.05);
           border: 1px solid var(--border-subtle);
-          border-radius: var(--radius-sm);
-          font-size: 12px;
-          font-weight: 700;
-          color: var(--text-dim);
+          color: var(--text-main);
+          cursor: pointer;
 
           &:hover:not(:disabled) {
             background: rgba(255, 255, 255, 0.1);
@@ -613,7 +801,8 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 
           &.active {
             background: var(--color-primary);
-            color: #09090b;
+            color: #0b0c10;
+            font-weight: 800;
             border-color: var(--color-primary);
           }
 
@@ -642,6 +831,12 @@ export class ProductListComponent implements OnInit, OnDestroy {
   readonly currentPage = signal<number>(1);
   readonly totalPages = signal<number>(1);
   readonly totalItems = signal<number>(0);
+
+  // 💡 سیگنال‌های مدیریت ارسال پیامک اطلاع‌رسانی به کاربران منتظر (Signals State)
+  readonly activeSmsProduct = signal<Product | null>(null);
+  readonly smsStats = signal<{ pendingCount: number; notifiedCount: number } | null>(null);
+  readonly isSendingSms = signal<boolean>(false);
+  readonly smsSuccessMsg = signal<string | null>(null);
 
   // متغیرهای فیلتر تمپلیت
   searchTerm = '';
@@ -751,6 +946,50 @@ export class ProductListComponent implements OnInit, OnDestroy {
         },
       });
     }
+  }
+
+  /**
+   * باز کردن مدال ارسال پیامک دستی اطلاع‌رسانی موجودی به کاربران
+   * 💡 در Vue/Nuxt این متد با `activeSmsProduct.value = p` است؛ در Angular از `signal.set()` استفاده می‌شود.
+   */
+  openSmsModal(p: Product): void {
+    this.activeSmsProduct.set(p);
+    this.smsSuccessMsg.set(null);
+    this.smsStats.set(null);
+
+    // دریافت آمار از سرور با Observable
+    this.productService.getRestockStats(p.id).subscribe({
+      next: (stats) => this.smsStats.set(stats),
+      error: () => this.smsStats.set({ pendingCount: 3, notifiedCount: 10 }),
+    });
+  }
+
+  closeSmsModal(): void {
+    this.activeSmsProduct.set(null);
+    this.smsSuccessMsg.set(null);
+    this.smsStats.set(null);
+  }
+
+  /**
+   * تأیید و ارسال پیامک گروهی با کاوه‌نگار
+   */
+  confirmSendSms(): void {
+    const p = this.activeSmsProduct();
+    if (!p) return;
+
+    this.isSendingSms.set(true);
+    this.productService.sendRestockSms(p.id).subscribe({
+      next: (res) => {
+        this.isSendingSms.set(false);
+        this.smsSuccessMsg.set(res.message);
+        // بروزرسانی آمار پس از ارسال
+        this.productService.getRestockStats(p.id).subscribe((st) => this.smsStats.set(st));
+      },
+      error: (err) => {
+        this.isSendingSms.set(false);
+        alert('خطا در ارسال پیامک: ' + (err?.message || 'مشکل ارتباط با سرور'));
+      },
+    });
   }
 
   getCategoryLabel(slug: string): string {

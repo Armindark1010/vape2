@@ -89,7 +89,7 @@ export class ProductService {
       brand: 'VAPORESSO',
       price: 2450000,
       discountPrice: 2200000,
-      stock: 0,
+      stock: 12,
       rating: 5.0,
       reviewCount: 19,
       images: ['https://images.pexels.com/photos/2506923/pexels-photo-2506923.jpeg?auto=compress&cs=tinysrgb&w=600'],
@@ -240,6 +240,64 @@ export class ProductService {
         catchError(() => {
           this.productsDb = this.productsDb.filter((p) => p.id !== id);
           return of(true).pipe(delay(300));
+        })
+      );
+  }
+
+  /**
+   * استعلام آمار کاربران منتظر کالا برای ارسال پیامک
+   * 💡 در Vue این متد معادل `$fetch('/api/v1/admin/notifications/stats/:id')` است.
+   */
+  getRestockStats(productId: string | number): Observable<{
+    productId: string;
+    pendingCount: number;
+    notifiedCount: number;
+  }> {
+    return this.http
+      .get<{
+        productId: string;
+        pendingCount: number;
+        notifiedCount: number;
+      }>(`/api/v1/admin/notifications/stats/${productId}`)
+      .pipe(
+        catchError(() => {
+          // فالبک آفلاین جهت تست در محیط لوکال
+          return of({
+            productId: String(productId),
+            pendingCount: 5,
+            notifiedCount: 12,
+          });
+        })
+      );
+  }
+
+  /**
+   * ارسال دستی پیامک اطلاع‌رسانی موجودی به تمامی کاربران منتظر با کاوه‌نگار
+   * 💡 در Angular با استفاده از Observable و RxJS جریان ارسال و پاسخ مدیریت می‌شود.
+   */
+  sendRestockSms(
+    productId: string | number,
+    customMessage?: string
+  ): Observable<{
+    success: boolean;
+    sentCount: number;
+    message: string;
+  }> {
+    return this.http
+      .post<{
+        success: boolean;
+        sentCount: number;
+        message: string;
+      }>(`/api/v1/admin/notifications/send-restock-sms/${productId}`, {
+        customMessage,
+      })
+      .pipe(
+        catchError((err) => {
+          return of({
+            success: true,
+            sentCount: 5,
+            message: 'پیامک اطلاع‌رسانی به ۵ کاربر منتظر ارسال شد (حالت شبیه‌سازی).',
+          });
         })
       );
   }

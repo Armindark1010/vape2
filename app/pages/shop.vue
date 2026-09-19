@@ -73,7 +73,7 @@ const initial = computed(() => ({
     <div class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <p class="text-[11px] font-extrabold tracking-widest text-vio">
-          {{ catName ? `دسته: ${catName}` : "فروشگاه ویپورا" }}
+          {{ catName ? `دسته: ${catName}` : "فروشگاه ویپ‌لب" }}
         </p>
         <h1 class="mt-1 font-display text-[28px] font-extrabold text-snow lg:text-4xl">
           {{ catName ? catName : "همه محصولات" }}
@@ -135,7 +135,7 @@ const initial = computed(() => ({
     </div>
 
     <p class="mt-10 text-center text-[11px] leading-6 text-dim">
-      همه کالاهای ویپورا دارای <strong class="text-mist">هولوگرام اصالت</strong> هستند · در صورت مغایرت، وجه کامل برگردانده می‌شود.
+      همه کالاهای ویپ‌لب دارای <strong class="text-mist">هولوگرام اصالت</strong> هستند · در صورت مغایرت، وجه کامل برگردانده می‌شود.
     </p>
   </div>
 </template>

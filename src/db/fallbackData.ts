@@ -56,7 +56,7 @@ export const FALLBACK_PRODUCTS: Product[] = [
     discountPrice: 990000,
     rating: 4.8,
     reviewCount: 214,
-    stock: 46,
+    stock: 0,
     brand: "ELFBAR",
     brandSlug: "elfbar",
     category: "پاد یک‌بارمصرف",

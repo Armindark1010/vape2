@@ -1,12 +1,12 @@
 export const SITE = {
-  name: "ویپورا",
-  latin: "VAPORA",
+  name: "ویپ‌لب",
+  latin: "VAPELAB",
   tagline: "دودِ نرم، طعمِ ناب",
-  domain: "https://vapora.example.com",
+  domain: "https://vapelab.ir",
   phone: "۰۲۱-۹۱۰۰۲۲۳۳",
 };
 
-export const AGE_KEY = "vapora.age.ok";
+export const AGE_KEY = "vapelab.age.ok";
 export const FREE_SHIPPING = 2_000_000; // تومان
 export const FLAT_SHIPPING = 65_000; // تومان
 

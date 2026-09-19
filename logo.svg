@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 240" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Master Brand Gradient -->
+    <linearGradient id="vl-master-grad" x1="10%" y1="90%" x2="90%" y2="10%">
+      <stop offset="0%" stop-color="#8B5CF6" />
+      <stop offset="25%" stop-color="#A78BFA" />
+      <stop offset="55%" stop-color="#38BDF8" />
+      <stop offset="80%" stop-color="#2FE695" />
+      <stop offset="100%" stop-color="#4ADE80" />
+    </linearGradient>
+
+    <!-- Glow Filter -->
+    <filter id="vl-master-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" opacity="0.65" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Dark Slate Background Canvas -->
+  <rect width="100%" height="100%" fill="#0A0A0C" rx="16" />
+
+  <!-- ========================================== -->
+  <!-- بخش ۱: آیکون مجزا / Favicon (ابعاد 90x90) -->
+  <!-- ========================================== -->
+  <g transform="translate(30, 45)">
+    <rect width="90" height="90" rx="20" fill="#121216" stroke="#22222A" stroke-width="1.2" />
+    <g transform="translate(10, 5) scale(0.35)" filter="url(#vl-master-glow)">
+      <!-- 1. Left V-Wing -->
+      <path d="M 52 50 C 58 48, 70 48, 76 62 L 104 135" stroke="url(#vl-master-grad)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- 2. Bottom Loop -->
+      <path d="M 104 135 C 98 152, 78 160, 64 148 C 50 136, 56 112, 70 96" stroke="url(#vl-master-grad)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- 3. Center Pod Stem -->
+      <path d="M 104 135 L 140 58" stroke="url(#vl-master-grad)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- 4. Pod Mouthpiece & Outer Contour -->
+      <path d="M 88 155 L 148 76 C 152 70, 160 58, 154 48 L 148 38 C 144 32, 134 30, 128 34 L 118 46 C 112 52, 112 60, 116 68 L 105 92" stroke="url(#vl-master-grad)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- 5. Collar Notch -->
+      <path d="M 125 56 L 146 68" stroke="url(#vl-master-grad)" stroke-width="7" stroke-linecap="round" />
+    </g>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- بخش ۲: لوگو افقی / Horizontal (260x70)   -->
+  <!-- ========================================== -->
+  <g transform="translate(145, 55)">
+    <rect width="260" height="70" rx="14" fill="#121216" stroke="#22222A" stroke-width="1.2" />
+    <g transform="translate(10, 5) scale(0.3)" filter="url(#vl-master-glow)">
+      <path d="M 52 50 C 58 48, 70 48, 76 62 L 104 135" stroke="url(#vl-master-grad)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 104 135 C 98 152, 78 160, 64 148 C 50 136, 56 112, 70 96" stroke="url(#vl-master-grad)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 104 135 L 140 58" stroke="url(#vl-master-grad)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 88 155 L 148 76 C 152 70, 160 58, 154 48 L 148 38 C 144 32, 134 30, 128 34 L 118 46 C 112 52, 112 60, 116 68 L 105 92" stroke="url(#vl-master-grad)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 125 56 L 146 68" stroke="url(#vl-master-grad)" stroke-width="7" stroke-linecap="round" />
+    </g>
+    <text x="75" y="44" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="900" letter-spacing="4">VAPELAB</text>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- بخش ۳: لوگو عمودی / Vertical (210x180)   -->
+  <!-- ========================================== -->
+  <g transform="translate(430, 30)">
+    <rect width="240" height="180" rx="18" fill="#121216" stroke="#22222A" stroke-width="1.2" />
+    <g transform="translate(45, 10) scale(0.75)" filter="url(#vl-master-glow)">
+      <path d="M 52 50 C 58 48, 70 48, 76 62 L 104 135" stroke="url(#vl-master-grad)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 104 135 C 98 152, 78 160, 64 148 C 50 136, 56 112, 70 96" stroke="url(#vl-master-grad)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 104 135 L 140 58" stroke="url(#vl-master-grad)" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 88 155 L 148 76 C 152 70, 160 58, 154 48 L 148 38 C 144 32, 134 30, 128 34 L 118 46 C 112 52, 112 60, 116 68 L 105 92" stroke="url(#vl-master-grad)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M 125 56 L 146 68" stroke="url(#vl-master-grad)" stroke-width="7" stroke-linecap="round" />
+    </g>
+    <text x="120" y="155" text-anchor="middle" fill="#FFFFFF" font-family="system-ui, -apple-system, sans-serif" font-size="22" font-weight="900" letter-spacing="4">VAPELAB</text>
+  </g>
+</svg>

@@ -13,7 +13,7 @@ import { ArrowLeftIcon, CheckIcon } from "~/components/vapor/VIcons";
 useSeoMeta({
   title: `${SITE.name} | فروشگاه تخصصی ویپ، سالت و پاد — ${SITE.tagline}`,
   description:
-    "فروشگاه تخصصی ویپورا — خرید آنلاین پاد یک‌بارمصرف، سالت نیکوتین، مود و لوازم جانبی اصل با هولوگرام. ارسال فوری تهران، پرداخت در محل، ضمانت اصالت23 کالا.",
+    "فروشگاه تخصصی ویپ‌لب (VAPELAB) — خرید آنلاین پاد یک‌بارمصرف، سالت نیکوتین، مود و لوازم جانبی اصل با هولوگرام. ارسال فوری تهران، پرداخت در محل، ضمانت اصالت کالا.",
   ogTitle: `${SITE.name} — ${SITE.tagline}`,
   ogDescription: "پاد یک‌بارمصرف، سالت نیکوتین و مود اصل با ضمانت اصالت و ارسال فوری.",
   ogImage: "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=1200",
@@ -145,7 +145,7 @@ const deal = computed(
     <CategorySlider :cats="(categories || []).map((c) => ({ slug: c.slug, name: c.name, count: c.count, image: c.image }))" />
 
     <!-- جدیدترین‌ها -->
-    <SectionRow title="تازه‌های ویپورا ☁️" sub="جدیدترین پادها و سالت‌ها — زود تموم میشن" href="/shop?sort=newest">
+    <SectionRow title="تازه‌های ویپ‌لب ☁️" sub="جدیدترین پادها و سالت‌ها — زود تموم میشن" href="/shop?sort=newest">
       <ProductRail>
         <RailItem v-for="(p, i) in newest" :key="p.id">
           <ProductCard :p="p" :index="i" />
@@ -165,7 +165,7 @@ const deal = computed(
               تا <span class="text-grad">٪۱۵ تخفیف</span> روی همه سالت‌ها
             </h2>
             <p class="mt-2 text-[13px] text-mist">
-              کد تخفیف: <strong dir="ltr" class="rounded-lg border border-dashed border-neon/50 bg-ink/60 px-2 py-1 font-mono text-neon">VAPORA15</strong> — در صفحه پرداخت وارد کن
+              کد تخفیف: <strong dir="ltr" class="rounded-lg border border-dashed border-neon/50 bg-ink/60 px-2 py-1 font-mono text-neon">VAPELAB15</strong> — در صفحه پرداخت وارد کن
             </p>
           </div>
           <NuxtLink
@@ -186,7 +186,7 @@ const deal = computed(
       </div>
     </SectionRow>
 
-    <!-- چرا ویپورا -->
+    <!-- چرا ویپ‌لب -->
     <section class="wrap mt-14">
       <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div

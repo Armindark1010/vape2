@@ -1,25 +1,59 @@
 <script setup lang="ts">
-import { ref, watch, onMounted, onUnmounted } from "vue";
+import { ref, watch, onUnmounted } from "vue";
+import VapeLogo from "~/components/vapor/VapeLogo.vue";
 import { useAuth } from "~/composables/useAuth";
 import { useVape } from "~/composables/useVape";
-import { CloseIcon, UserIcon, DropletIcon } from "~/components/vapor/VIcons";
+import {
+  CloseIcon,
+  UserIcon,
+  SmartphoneIcon,
+  KeyIcon,
+  LockIcon,
+  EyeIcon,
+  EyeOffIcon,
+  InfoIcon,
+  EditIcon,
+  BoltIcon,
+  UserPlusIcon,
+} from "~/components/vapor/VIcons";
 
-const { authModalOpen, authMode, authReason, loading, authError, closeAuth, login, register } = useAuth();
+const {
+  authModalOpen,
+  authMode,
+  authTab,
+  otpStep,
+  otpPhone,
+  authReason,
+  loading,
+  authError,
+  closeAuth,
+  setAuthTab,
+  setAuthMode,
+  sendOtp,
+  loginWithOtp,
+  loginWithPassword,
+  register,
+} = useAuth();
+
 const { toast } = useVape();
 
-// Login Form
-const loginUsername = ref("");
-const loginPassword = ref("");
-const showLoginPassword = ref(false);
+// OTP Form state
+const mobileInput = ref("");
+const otpCode = ref("");
+const resendTimer = ref(0);
+let timerInterval: any = null;
 
-// Register Form
-const regName = ref("");
-const regUsername = ref("");
-const regEmail = ref("");
-const regPhone = ref("");
-const regPassword = ref("");
-const regConfirmPassword = ref("");
-const showRegPassword = ref(false);
+// Password Login state
+const loginIdentifier = ref("");
+const loginPass = ref("");
+const showLoginPass = ref(false);
+
+// Register state
+const regFullName = ref("");
+const regIdentifier = ref("");
+const regPass = ref("");
+const regConfirmPass = ref("");
+const showRegPass = ref(false);
 
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === "Escape" && authModalOpen.value) {
@@ -27,7 +61,7 @@ const handleKeydown = (e: KeyboardEvent) => {
   }
 };
 
-watch(authModalOpen, (isOpen) => {
+watch(authModalOpen, (isOpen: boolean) => {
   if (typeof document === "undefined") return;
   if (isOpen) {
     document.body.style.overflow = "hidden";
@@ -35,6 +69,7 @@ watch(authModalOpen, (isOpen) => {
   } else {
     document.body.style.overflow = "";
     window.removeEventListener("keydown", handleKeydown);
+    clearInterval(timerInterval);
   }
 });
 
@@ -45,259 +80,498 @@ onUnmounted(() => {
       document.body.style.overflow = "";
     }
   }
+  clearInterval(timerInterval);
 });
 
-const submitLogin = async () => {
-  if (!loginUsername.value.trim()) {
-    toast("لطفاً نام کاربری یا ایمیل خود را وارد کنید", "err");
+const startResendTimer = () => {
+  resendTimer.value = 90;
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    if (resendTimer.value > 0) {
+      resendTimer.value--;
+    } else {
+      clearInterval(timerInterval);
+    }
+  }, 1000);
+};
+
+// ────────── Handlers ──────────
+
+const handleSendOtp = async () => {
+  const phone = mobileInput.value.trim();
+  if (!phone) {
+    toast("لطفاً شماره موبایل خود را وارد کنید", "err");
     return;
   }
-  if (!loginPassword.value) {
+  if (!/^(\+98|0)?9\d{9}$/.test(phone.replace(/\s+/g, ""))) {
+    toast("لطفاً یک شماره موبایل معتبر (مثلاً 09123456789) وارد کنید", "err");
+    return;
+  }
+
+  const res = await sendOtp(phone);
+  if (res.success) {
+    startResendTimer();
+    otpCode.value = "11111";
+  }
+};
+
+const handleVerifyOtp = async () => {
+  const code = otpCode.value.trim();
+  if (!code) {
+    toast("لطفاً کد ۵ رقمی را وارد کنید", "err");
+    return;
+  }
+  await loginWithOtp(otpPhone.value || mobileInput.value.trim(), code);
+};
+
+const handleResendOtp = async () => {
+  if (resendTimer.value > 0) return;
+  await handleSendOtp();
+};
+
+const handleFillTestCode = () => {
+  otpCode.value = "11111";
+  toast("کد تست ۱۱۱۱۱ درج شد ✓", "ok");
+};
+
+const handleLoginPassword = async () => {
+  const id = loginIdentifier.value.trim();
+  const pass = loginPass.value;
+
+  if (!id) {
+    toast("لطفاً نام کاربری یا شماره موبایل را وارد کنید", "err");
+    return;
+  }
+  if (!pass) {
     toast("لطفاً رمز عبور را وارد کنید", "err");
     return;
   }
-  await login({
-    username: loginUsername.value.trim(),
-    password: loginPassword.value,
-  });
+
+  await loginWithPassword(id, pass);
 };
 
-const submitRegister = async () => {
-  if (!regName.value.trim()) {
-    toast("لطفاً نام و نام خانوادگی را وارد کنید", "err");
+const handleRegister = async () => {
+  const id = regIdentifier.value.trim();
+  const pass = regPass.value;
+  const cpass = regConfirmPass.value;
+
+  if (!id) {
+    toast("لطفاً نام کاربری یا شماره موبایل را وارد کنید", "err");
     return;
   }
-  if (!regUsername.value.trim()) {
-    toast("لطفاً نام کاربری را وارد کنید", "err");
+  if (!pass || pass.length < 6) {
+    toast("رمز عبور باید حداقل ۶ کاراکتر باشد", "err");
     return;
   }
-  if (!regPassword.value || regPassword.value.length < 4) {
-    toast("رمز عبور باید حداقل ۴ رقم باشد", "err");
-    return;
-  }
-  if (regPassword.value !== regConfirmPassword.value) {
-    toast("تکرار رمز عبور با رمز عبور مطابقت ندارد", "err");
+  if (pass !== cpass) {
+    toast("تکرار رمز عبور با رمز اصلی مطابقت ندارد", "err");
     return;
   }
 
   await register({
-    name: regName.value.trim(),
-    username: regUsername.value.trim(),
-    email: regEmail.value.trim() || `${regUsername.value.trim()}@vapora.local`,
-    phone: regPhone.value.trim() || undefined,
-    password: regPassword.value,
+    usernameOrMobile: id,
+    password: pass,
+    fullName: regFullName.value.trim() || undefined,
   });
 };
 </script>
 
 <template>
   <Teleport to="body">
-    <Transition
-      enter-active-class="transition duration-300 ease-out"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition duration-200 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
+    <Transition name="fade">
       <div
         v-if="authModalOpen"
-        class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-ink/80 backdrop-blur-md"
-        @click.self="closeAuth"
+        class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4"
       >
+        <!-- Backdrop -->
         <div
-          class="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/12 bg-surface/95 p-6 shadow-2xl backdrop-blur-2xl transition-all"
-        >
-          <!-- افکت نئونی زمینه -->
-          <div class="pointer-events-none absolute -top-24 -left-20 h-56 w-56 rounded-full bg-vio/20 blur-3xl" />
-          <div class="pointer-events-none absolute -bottom-24 -right-20 h-56 w-56 rounded-full bg-neon/15 blur-3xl" />
+          class="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity"
+          @click="closeAuth"
+        />
 
-          <!-- هدر مودال -->
-          <div class="relative flex items-center justify-between pb-4 border-b border-white/8">
+        <!-- Modal Container (Mobile-First Minimal Architecture) -->
+        <div
+          class="relative w-full max-w-[420px] max-h-[92vh] overflow-y-auto rounded-3xl border border-white/10 bg-[#0C0C10]/95 p-5 sm:p-6 shadow-[0_20px_60px_rgba(0,0,0,0.85)] backdrop-blur-2xl transition-all"
+        >
+          <!-- Top Bar -->
+          <div class="flex items-center justify-between pb-3.5 border-b border-white/[0.08]">
             <div class="flex items-center gap-2">
-              <span class="grid h-10 w-10 place-items-center rounded-xl bg-vio/15 text-vio">
-                <UserIcon :size="20" />
-              </span>
-              <div>
-                <h3 class="text-[16px] font-extrabold text-snow">
-                  {{ authMode === 'login' ? 'ورود به حساب کاربری' : 'عضویت در ویپورا' }}
-                </h3>
-                <p class="text-[11px] text-dim">
-                  {{ authReason || 'برای دسترسی به تمام امکانات فروشگاه' }}
-                </p>
+              <VapeLogo variant="icon" height="28" />
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-sm font-bold tracking-tight text-white">ویپ‌لب</span>
+                <span class="text-[10px] font-mono font-medium text-neon">VAPELAB</span>
               </div>
             </div>
+
             <button
-              class="pressable grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-mist hover:text-snow cursor-pointer"
-              aria-label="بستن"
+              type="button"
+              class="flex h-8 w-8 items-center justify-center rounded-xl bg-white/[0.04] text-sub hover:bg-white/10 hover:text-white transition-colors"
+              aria-label="بستن پنجره"
               @click="closeAuth"
             >
-              <CloseIcon :size="18" />
+              <CloseIcon :size="16" />
             </button>
           </div>
 
-          <!-- سوئیچ تب‌ها -->
-          <div class="relative mt-5 flex rounded-2xl bg-white/5 p-1 border border-white/8">
+          <!-- Notification / Reason Banner -->
+          <div
+            v-if="authReason"
+            class="mt-3.5 rounded-xl bg-neon/[0.08] border border-neon/20 px-3 py-2 text-xs text-neon text-center font-medium flex items-center justify-center gap-1.5"
+          >
+            <InfoIcon :size="15" class="shrink-0 text-neon" />
+            <span>{{ authReason }}</span>
+          </div>
+
+          <!-- Mode Title & Subtitle -->
+          <div class="mt-4 text-center">
+            <h3 class="text-base font-bold text-white">
+              <template v-if="authMode === 'register'">
+                ایجاد حساب کاربری جدید
+              </template>
+              <template v-else-if="authTab === 'otp'">
+                ورود یا ثبت‌نام با پیامک
+              </template>
+              <template v-else>
+                ورود با کلمه عبور
+              </template>
+            </h3>
+            <p class="mt-1 text-xs text-sub/70">
+              {{
+                authMode === "register"
+                  ? "اطلاعات زیر را برای ایجاد حساب تکمیل کنید"
+                  : "برای دسترسی به سفارشات و پنل کاربری وارد شوید"
+              }}
+            </p>
+          </div>
+
+          <!-- Minimal Tab Switcher (Only in login mode) -->
+          <div
+            v-if="authMode === 'login'"
+            class="mt-4 grid grid-cols-2 rounded-xl bg-white/[0.04] p-1 border border-white/[0.08]"
+          >
             <button
               type="button"
-              class="pressable flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold transition-all cursor-pointer"
-              :class="authMode === 'login' ? 'bg-gradient-to-l from-vio to-ice text-ink shadow-md' : 'text-mist hover:text-snow'"
-              @click="authMode = 'login'"
+              class="flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium transition-all"
+              :class="
+                authTab === 'otp'
+                  ? 'bg-neon text-ink font-semibold shadow-sm'
+                  : 'text-sub hover:text-white'
+              "
+              @click="setAuthTab('otp')"
             >
-              ورود
+              <SmartphoneIcon :size="15" />
+              <span>ورود پیامکی (OTP)</span>
             </button>
+
             <button
               type="button"
-              class="pressable flex-1 rounded-xl py-2.5 text-center text-[13px] font-bold transition-all cursor-pointer"
-              :class="authMode === 'register' ? 'bg-gradient-to-l from-vio to-ice text-ink shadow-md' : 'text-mist hover:text-snow'"
-              @click="authMode = 'register'"
+              class="flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium transition-all"
+              :class="
+                authTab === 'password'
+                  ? 'bg-neon text-ink font-semibold shadow-sm'
+                  : 'text-sub hover:text-white'
+              "
+              @click="setAuthTab('password')"
             >
-              ثبت‌نام (بدون پیامک/OTP)
+              <KeyIcon :size="15" />
+              <span>کلمه عبور</span>
             </button>
           </div>
 
-          <!-- پیام خطا -->
-          <div v-if="authError" class="mt-4 rounded-xl border border-blush/30 bg-blush/10 p-3 text-[12px] text-blush">
+          <!-- Error Alert -->
+          <div
+            v-if="authError"
+            class="mt-3 rounded-xl bg-rose-500/10 border border-rose-500/20 px-3 py-2 text-xs text-rose-400 text-center font-medium"
+          >
             {{ authError }}
           </div>
 
-          <!-- فرم ورود -->
-          <form v-if="authMode === 'login'" class="mt-5 space-y-4" @submit.prevent="submitLogin">
+          <!-- ══════════════════ TAB 1: OTP FLOW ══════════════════ -->
+          <div v-if="authMode === 'login' && authTab === 'otp'" class="mt-4 space-y-4">
+            <!-- Step 1: Input Mobile Phone -->
+            <div v-if="otpStep === 'phone'" class="space-y-4">
+              <div>
+                <label class="block mb-1.5 text-xs font-medium text-sub">
+                  شماره تلفن همراه
+                </label>
+                <div class="relative">
+                  <input
+                    v-model="mobileInput"
+                    type="tel"
+                    dir="ltr"
+                    inputmode="numeric"
+                    placeholder="09123456789"
+                    maxlength="14"
+                    class="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder-sub/30 outline-none focus:border-neon/60 focus:ring-1 focus:ring-neon/30 transition-all font-mono"
+                    @keyup.enter="handleSendOtp"
+                  />
+                  <span class="absolute left-3 top-2.5 text-xs text-sub/60 font-mono">IR</span>
+                </div>
+                <p class="mt-1.5 text-[11px] text-sub/60 leading-relaxed">
+                  کد تأیید یکبارمصرف ۵ رقمی از طریق پیامک ارسال می‌شود.
+                </p>
+              </div>
+
+              <!-- Test bypass tip -->
+              <div class="rounded-xl border border-neon/20 bg-neon/[0.04] p-2.5 text-[11px] text-neon/90 flex items-start gap-2">
+                <InfoIcon :size="15" class="shrink-0 text-neon mt-0.5" />
+                <div class="leading-relaxed">
+                  <strong class="font-bold">تست بدون هزینه پیامک:</strong>
+                  <span> بعد از ارسال، می‌توانید مستقیماً کد تست <code class="font-mono font-bold text-white bg-black/40 px-1.5 py-0.5 rounded border border-white/10">11111</code> را وارد کنید.</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                :disabled="loading || !mobileInput.trim()"
+                class="w-full flex items-center justify-center gap-2 rounded-xl bg-linear-to-l from-neon to-[#35e89d] py-2.5 text-sm font-bold text-ink hover:opacity-95 disabled:opacity-50 transition-all shadow-[0_4px_16px_rgba(47,230,149,0.2)]"
+                @click="handleSendOtp"
+              >
+                <span v-if="loading" class="h-4 w-4 animate-spin rounded-full border-2 border-ink border-t-transparent" />
+                <span>{{ loading ? "در حال ارسال..." : "ارسال کد تأیید" }}</span>
+              </button>
+            </div>
+
+            <!-- Step 2: Input 5-digit OTP -->
+            <div v-else class="space-y-4">
+              <div class="flex items-center justify-between text-xs text-sub">
+                <div class="flex items-center gap-1.5">
+                  <SmartphoneIcon :size="14" class="text-neon" />
+                  <span>ارسال به <strong class="font-mono text-white">{{ otpPhone || mobileInput }}</strong></span>
+                </div>
+                <button
+                  type="button"
+                  class="flex items-center gap-1 text-neon hover:underline text-[11px]"
+                  @click="otpStep = 'phone'"
+                >
+                  <EditIcon :size="12" />
+                  <span>تغییر شماره</span>
+                </button>
+              </div>
+
+              <div>
+                <label class="block mb-1.5 text-xs font-medium text-sub">
+                  کد ۵ رقمی ارسال‌شده
+                </label>
+                <input
+                  v-model="otpCode"
+                  type="text"
+                  dir="ltr"
+                  inputmode="numeric"
+                  placeholder="11111"
+                  maxlength="5"
+                  class="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2.5 text-center text-xl font-bold tracking-[0.4em] text-neon placeholder-neon/20 outline-none focus:border-neon focus:ring-2 focus:ring-neon/30 transition-all font-mono"
+                  @keyup.enter="handleVerifyOtp"
+                />
+              </div>
+
+              <!-- Quick test code button -->
+              <div class="flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  class="flex items-center gap-1 text-[11px] text-neon bg-neon/[0.08] hover:bg-neon/[0.15] border border-neon/20 px-2.5 py-1.5 rounded-lg font-medium transition-colors"
+                  @click="handleFillTestCode"
+                >
+                  <BoltIcon :size="13" />
+                  <span>درج کد تست (۱۱۱۱۱)</span>
+                </button>
+
+                <div class="text-[11px] text-sub/70">
+                  <span v-if="resendTimer > 0">
+                    ارسال مجدد تا {{ resendTimer }} ثانیه
+                  </span>
+                  <button
+                    v-else
+                    type="button"
+                    class="text-neon hover:underline"
+                    @click="handleResendOtp"
+                  >
+                    ارسال مجدد کد
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                :disabled="loading || otpCode.trim().length < 5"
+                class="w-full flex items-center justify-center gap-2 rounded-xl bg-linear-to-l from-neon to-[#35e89d] py-2.5 text-sm font-bold text-ink hover:opacity-95 disabled:opacity-50 transition-all shadow-[0_4px_16px_rgba(47,230,149,0.2)]"
+                @click="handleVerifyOtp"
+              >
+                <span v-if="loading" class="h-4 w-4 animate-spin rounded-full border-2 border-ink border-t-transparent" />
+                <span>{{ loading ? "در حال اعتبارسنجی..." : "تأیید و ورود" }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ══════════════════ TAB 2: PASSWORD LOGIN ══════════════════ -->
+          <div
+            v-else-if="authMode === 'login' && authTab === 'password'"
+            class="mt-4 space-y-4"
+          >
             <div>
-              <label class="mb-1.5 block text-[12px] font-bold text-mist">نام کاربری یا ایمیل</label>
+              <label class="block mb-1.5 text-xs font-medium text-sub">
+                نام کاربری یا شماره موبایل
+              </label>
               <input
-                v-model="loginUsername"
+                v-model="loginIdentifier"
                 type="text"
                 dir="ltr"
-                placeholder="username or email"
-                class="input h-12 w-full rounded-2xl px-4 text-[14px]"
-                required
+                placeholder="09123456789 یا username"
+                class="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder-sub/30 outline-none focus:border-neon/60 focus:ring-1 focus:ring-neon/30 transition-all font-mono"
               />
             </div>
 
             <div>
-              <label class="mb-1.5 block text-[12px] font-bold text-mist">رمز عبور</label>
+              <label class="block mb-1.5 text-xs font-medium text-sub">
+                کلمه عبور
+              </label>
               <div class="relative">
                 <input
-                  v-model="loginPassword"
-                  :type="showLoginPassword ? 'text' : 'password'"
+                  v-model="loginPass"
+                  :type="showLoginPass ? 'text' : 'password'"
                   dir="ltr"
                   placeholder="••••••••"
-                  class="input h-12 w-full rounded-2xl px-4 pl-12 text-[14px]"
-                  required
+                  class="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2.5 text-sm text-white placeholder-sub/30 outline-none focus:border-neon/60 focus:ring-1 focus:ring-neon/30 transition-all font-mono"
+                  @keyup.enter="handleLoginPassword"
                 />
                 <button
                   type="button"
-                  class="absolute left-3 top-1/2 -translate-y-1/2 text-dim hover:text-snow text-[12px] cursor-pointer"
-                  @click="showLoginPassword = !showLoginPassword"
+                  class="absolute left-3 top-2.5 text-sub/60 hover:text-white transition-colors"
+                  :aria-label="showLoginPass ? 'پنهان کردن رمز' : 'نمایش رمز'"
+                  @click="showLoginPass = !showLoginPass"
                 >
-                  {{ showLoginPassword ? 'مخفی' : 'نمایش' }}
+                  <EyeOffIcon v-if="showLoginPass" :size="16" />
+                  <EyeIcon v-else :size="16" />
                 </button>
               </div>
             </div>
 
             <button
-              type="submit"
-              :disabled="loading"
-              class="pressable mt-2 flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-vio to-ice text-[14.5px] font-extrabold text-ink glow-v disabled:opacity-50 cursor-pointer"
+              type="button"
+              :disabled="loading || !loginIdentifier.trim() || !loginPass"
+              class="w-full flex items-center justify-center gap-2 rounded-xl bg-linear-to-l from-neon to-[#35e89d] py-2.5 text-sm font-bold text-ink hover:opacity-95 disabled:opacity-50 transition-all shadow-[0_4px_16px_rgba(47,230,149,0.2)]"
+              @click="handleLoginPassword"
             >
-              <span v-if="loading" class="animate-spin text-lg">⏳</span>
-              <span v-else>ورود به حساب</span>
+              <span v-if="loading" class="h-4 w-4 animate-spin rounded-full border-2 border-ink border-t-transparent" />
+              <span>{{ loading ? "در حال ورود..." : "ورود به حساب" }}</span>
             </button>
-          </form>
 
-          <!-- فرم ثبت نام -->
-          <form v-else class="mt-5 space-y-3.5" @submit.prevent="submitRegister">
+            <!-- Switch to Register -->
+            <div class="text-center pt-2 text-xs text-sub/80 flex items-center justify-center gap-1.5">
+              <span>حساب کاربری ندارید؟</span>
+              <button
+                type="button"
+                class="font-semibold text-neon hover:underline flex items-center gap-1"
+                @click="setAuthMode('register')"
+              >
+                <UserPlusIcon :size="13" />
+                <span>ثبت‌نام با کلمه عبور</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ══════════════════ REGISTER FORM ══════════════════ -->
+          <div v-else-if="authMode === 'register'" class="mt-4 space-y-3">
             <div>
-              <label class="mb-1 block text-[11.5px] font-bold text-mist">نام و نام خانوادگی</label>
-              <input
-                v-model="regName"
-                type="text"
-                placeholder="مثلاً: علی محمدی"
-                class="input h-11 w-full rounded-2xl px-4 text-[13.5px]"
-                required
-              />
-            </div>
-
-            <div class="grid grid-cols-2 gap-2.5">
-              <div>
-                <label class="mb-1 block text-[11.5px] font-bold text-mist">نام کاربری</label>
-                <input
-                  v-model="regUsername"
-                  type="text"
-                  dir="ltr"
-                  placeholder="ali_vaper"
-                  class="input h-11 w-full rounded-2xl px-3 text-[13px]"
-                  required
-                />
-              </div>
-              <div>
-                <label class="mb-1 block text-[11.5px] font-bold text-mist">شماره تماس (اختیاری)</label>
-                <input
-                  v-model="regPhone"
-                  type="tel"
-                  dir="ltr"
-                  placeholder="۰۹۱۲۳۴۵۶۷۸۹"
-                  class="input h-11 w-full rounded-2xl px-3 text-[13px]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label class="mb-1 block text-[11.5px] font-bold text-mist">ایمیل (اختیاری)</label>
-              <input
-                v-model="regEmail"
-                type="email"
-                dir="ltr"
-                placeholder="name@example.com"
-                class="input h-11 w-full rounded-2xl px-4 text-[13px]"
-              />
-            </div>
-
-            <div class="grid grid-cols-2 gap-2.5">
-              <div>
-                <label class="mb-1 block text-[11.5px] font-bold text-mist">رمز عبور</label>
-                <input
-                  v-model="regPassword"
-                  :type="showRegPassword ? 'text' : 'password'"
-                  dir="ltr"
-                  placeholder="حداقل ۴ کاراکتر"
-                  class="input h-11 w-full rounded-2xl px-3 text-[13px]"
-                  required
-                />
-              </div>
-              <div>
-                <label class="mb-1 block text-[11.5px] font-bold text-mist">تکرار رمز عبور</label>
-                <input
-                  v-model="regConfirmPassword"
-                  :type="showRegPassword ? 'text' : 'password'"
-                  dir="ltr"
-                  placeholder="تکرار رمز"
-                  class="input h-11 w-full rounded-2xl px-3 text-[13px]"
-                  required
-                />
-              </div>
-            </div>
-
-            <div class="flex items-center justify-between text-[11px] text-dim">
-              <label class="flex items-center gap-1.5 cursor-pointer">
-                <input v-model="showRegPassword" type="checkbox" class="accent-vio" />
-                نمایش رمز عبور
+              <label class="block mb-1 text-xs font-medium text-sub">
+                نام و نام خانوادگی (اختیاری)
               </label>
-              <span>بدون نیاز به کد پیامک (OTP)</span>
+              <input
+                v-model="regFullName"
+                type="text"
+                placeholder="مثال: آرمین شریفی"
+                class="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm text-white placeholder-sub/30 outline-none focus:border-neon/60 focus:ring-1 focus:ring-neon/30 transition-all"
+              />
+            </div>
+
+            <div>
+              <label class="block mb-1 text-xs font-medium text-sub">
+                نام کاربری یا شماره موبایل <span class="text-rose-400">*</span>
+              </label>
+              <input
+                v-model="regIdentifier"
+                type="text"
+                dir="ltr"
+                placeholder="09123456789 یا my_username"
+                class="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm text-white placeholder-sub/30 outline-none focus:border-neon/60 focus:ring-1 focus:ring-neon/30 transition-all font-mono"
+              />
+            </div>
+
+            <div>
+              <label class="block mb-1 text-xs font-medium text-sub">
+                کلمه عبور (حداقل ۶ کاراکتر) <span class="text-rose-400">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  v-model="regPass"
+                  :type="showRegPass ? 'text' : 'password'"
+                  dir="ltr"
+                  placeholder="حداقل ۶ کاراکتر"
+                  class="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm text-white placeholder-sub/30 outline-none focus:border-neon/60 focus:ring-1 focus:ring-neon/30 transition-all font-mono"
+                />
+                <button
+                  type="button"
+                  class="absolute left-3 top-2 text-sub/60 hover:text-white transition-colors"
+                  :aria-label="showRegPass ? 'پنهان کردن رمز' : 'نمایش رمز'"
+                  @click="showRegPass = !showRegPass"
+                >
+                  <EyeOffIcon v-if="showRegPass" :size="16" />
+                  <EyeIcon v-else :size="16" />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block mb-1 text-xs font-medium text-sub">
+                تکرار کلمه عبور <span class="text-rose-400">*</span>
+              </label>
+              <input
+                v-model="regConfirmPass"
+                type="password"
+                dir="ltr"
+                placeholder="تکرار کلمه عبور"
+                class="w-full rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm text-white placeholder-sub/30 outline-none focus:border-neon/60 focus:ring-1 focus:ring-neon/30 transition-all font-mono"
+                @keyup.enter="handleRegister"
+              />
             </div>
 
             <button
-              type="submit"
-              :disabled="loading"
-              class="pressable mt-2 flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-vio to-ice text-[14.5px] font-extrabold text-ink glow-v disabled:opacity-50 cursor-pointer"
+              type="button"
+              :disabled="loading || !regIdentifier.trim() || !regPass || !regConfirmPass"
+              class="w-full flex items-center justify-center gap-2 rounded-xl bg-linear-to-l from-neon to-[#35e89d] py-2.5 text-sm font-bold text-ink hover:opacity-95 disabled:opacity-50 transition-all shadow-[0_4px_16px_rgba(47,230,149,0.2)]"
+              @click="handleRegister"
             >
-              <span v-if="loading" class="animate-spin text-lg">⏳</span>
-              <span v-else>ثبت‌نام و ورود</span>
+              <span v-if="loading" class="h-4 w-4 animate-spin rounded-full border-2 border-ink border-t-transparent" />
+              <span>{{ loading ? "در حال ثبت‌نام..." : "ایجاد حساب کاربری" }}</span>
             </button>
-          </form>
+
+            <!-- Switch to Login -->
+            <div class="text-center pt-2 text-xs text-sub/80 flex items-center justify-center gap-1.5">
+              <span>قبلاً ثبت‌نام کرده‌اید؟</span>
+              <button
+                type="button"
+                class="font-semibold text-neon hover:underline flex items-center gap-1"
+                @click="setAuthMode('login')"
+              >
+                <LockIcon :size="13" />
+                <span>ورود به حساب</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: scale(0.97);
+}
+</style>

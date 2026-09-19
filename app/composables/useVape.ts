@@ -40,6 +40,30 @@ export function useVape() {
     wish.value = loadStorage<number[]>("vapora.wish", []);
     ageOk.value = loadStorage<boolean>(AGE_KEY, false);
     hydrated.value = true;
+    revalidateCart();
+  };
+
+  const revalidateCart = async () => {
+    if (cart.value.length === 0) return;
+    try {
+      const res = await $fetch<any>("/api/products");
+      const list = Array.isArray(res) ? res : (res?.products || res?.items || []);
+      if (list.length > 0) {
+        const stockMap = new Map<number, number>(list.map((p: any) => [Number(p.id), Number(p.stock)]));
+        cart.value = cart.value.map((c) => {
+          const currentStock = stockMap.has(Number(c.id)) ? (stockMap.get(Number(c.id)) ?? 0) : c.stock;
+          return {
+            ...c,
+            stock: currentStock,
+          };
+        });
+        if (typeof window !== "undefined") {
+          localStorage.setItem("vapora.cart", JSON.stringify(cart.value));
+        }
+      }
+    } catch {
+      // Ignore
+    }
   };
 
   if (typeof window !== "undefined") {
@@ -146,6 +170,14 @@ export function useVape() {
   const cartCount = computed(() => cart.value.reduce((s, c) => s + c.qty, 0));
   const cartTotal = computed(() => cart.value.reduce((s, c) => s + c.price * c.qty, 0));
 
+  const hasOutOfStockItems = computed(() =>
+    cart.value.some((c) => c.stock <= 0 || c.qty > c.stock)
+  );
+
+  const outOfStockItems = computed(() =>
+    cart.value.filter((c) => c.stock <= 0 || c.qty > c.stock)
+  );
+
   return {
     hydrated,
     ageOk,
@@ -153,6 +185,9 @@ export function useVape() {
     cart,
     cartCount,
     cartTotal,
+    hasOutOfStockItems,
+    outOfStockItems,
+    revalidateCart,
     add,
     setQty,
     remove,

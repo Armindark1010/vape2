@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { SITE, DISCLAIMER } from "~/utils/vape";
-import { DropletIcon } from "~/components/vapor/VIcons";
+import VapeLogo from "~/components/vapor/VapeLogo.vue";
 
 const cols: { t: string; links: [string, string][] }[] = [
   {
@@ -18,7 +18,7 @@ const cols: { t: string; links: [string, string][] }[] = [
       ["پیگیری سفارش", "/account"],
       ["سبد خرید", "/cart"],
       ["تکمیل خرید", "/checkout"],
-      ["حساب کاربری", "/account"],
+      ["کیت هویت برند و لوگو", "/brand"],
     ],
   },
   {
@@ -37,9 +37,8 @@ const cols: { t: string; links: [string, string][] }[] = [
   <footer class="mt-16 border-t border-white/8 bg-[#0b0b0f]">
     <div class="wrap grid gap-10 py-12 md:grid-cols-[1.3fr_repeat(3,1fr)]">
       <div>
-        <NuxtLink to="/" class="flex items-center gap-2.5">
-          <span class="text-vio"><DropletIcon :size="22" /></span>
-          <span dir="ltr" class="text-[15px] font-extrabold tracking-[0.3em] text-snow">{{ SITE.latin }}</span>
+        <NuxtLink to="/" class="flex items-center gap-3 transition-opacity hover:opacity-90" aria-label="ویپ‌لب">
+          <VapeLogo variant="horizontal" height="34" />
         </NuxtLink>
         <p class="mt-4 max-w-xs text-[12.5px] leading-6 text-dim">
           فروشگاه تخصصی ویپ، سالت و پاد — فقط با کالای اورجینال و هولوگرام‌دار. {{ SITE.tagline }}.
