@@ -178,22 +178,30 @@ export async function getProducts(filters: ShopFilters = {}, limit = 48): Promis
   return list.slice(0, limit);
 }
 
-export async function getProductBySlug(slug: string): Promise<Product | null> {
+export async function getProductBySlug(slugOrId: string | number): Promise<Product | null> {
+  const isNumeric = typeof slugOrId === "number" || (!isNaN(Number(slugOrId)) && !isNaN(parseFloat(String(slugOrId))));
+  const numId = isNumeric ? Number(slugOrId) : null;
+  const slugStr = String(slugOrId);
+
   if (db) {
     try {
+      const condition = numId !== null
+        ? sql`(${products.id} = ${numId} or ${products.slug} = ${slugStr})`
+        : eq(products.slug, slugStr);
+
       const rows = await db
         .select(productSelect())
         .from(products)
         .leftJoin(brands, eq(products.brandId, brands.id))
         .leftJoin(categories, eq(products.categoryId, categories.id))
-        .where(eq(products.slug, slug))
+        .where(condition)
         .limit(1);
       if (rows[0]) return toProduct(rows[0]);
     } catch (err) {
       console.warn("Database getProductBySlug error, using fallback:", err);
     }
   }
-  return FALLBACK_PRODUCTS.find((p) => p.slug === slug) ?? null;
+  return FALLBACK_PRODUCTS.find((p) => p.slug === slugStr || (numId !== null && p.id === numId)) ?? null;
 }
 
 export async function getRelatedProducts(product: Product, limit = 4): Promise<Product[]> {

@@ -140,7 +140,7 @@ export class OrderService {
     }
 
     return this.http.get<Order[]>('/api/admin/orders', { params }).pipe(
-      map((orders) => (Array.isArray(orders) && orders.length > 0 ? orders : this.ordersDb)),
+      map((orders) => (Array.isArray(orders) ? orders : this.ordersDb)),
       catchError(() => {
         let list = [...this.ordersDb];
         if (status && status !== 'all') {

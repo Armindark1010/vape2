@@ -28,16 +28,26 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const token = authService.getToken();
 
-  // 1️⃣ اگر توکن وجود داشته باشد، درخواست را Clone کرده و هدر Authorization اضافه می‌کنیم
-  let authReq = req;
-  if (token) {
-    authReq = req.clone({
-      setHeaders: {
-        Authorization: `Bearer ${token}`,
-        'X-Requested-With': 'VaporaAdmin-Angular',
-      },
-    });
+  // 1️⃣ اگر درخواست به مسیر /api باشد و در محیط دولوپمنت پورت ۴۲۰۰ باشیم، مستقیم به سرور ناکست ۳۰۰۱ هدایت شود
+  let finalUrl = req.url;
+  if (typeof window !== 'undefined' && finalUrl.startsWith('/api')) {
+    if (window.location.port === '4200') {
+      finalUrl = `https://${window.location.hostname}:3001${finalUrl}`;
+    }
   }
+
+  // 2️⃣ تنظیم هدرها و توکن در صورت وجود
+  const headers: Record<string, string> = {
+    'X-Requested-With': 'VaporaAdmin-Angular',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const authReq = req.clone({
+    url: finalUrl,
+    setHeaders: headers,
+  });
 
   // 2️⃣ ارسال درخواست به مرحله بعد و گوش دادن به خطاهای احتمالی در پاسخ
   return next(authReq).pipe(

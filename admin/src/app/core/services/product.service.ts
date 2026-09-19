@@ -133,7 +133,7 @@ export class ProductService {
 
     return this.http.get<Product[]>('/api/products', { params }).pipe(
       map((items) => {
-        let list = Array.isArray(items) && items.length > 0 ? items : [...this.productsDb];
+        let list: Product[] = Array.isArray(items) ? items : (items as any)?.products || [...this.productsDb];
         
         if (filter.query) {
           const q = filter.query.toLowerCase();
