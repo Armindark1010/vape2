@@ -10,6 +10,8 @@ type AddArgs = {
   price: number;
   oldPrice: number | null;
   stock: number;
+  variantId?: string | null;
+  color?: string | null;
   flavor?: string | null;
   nicotine?: string | null;
 };
@@ -49,9 +51,15 @@ export function useVape() {
       const res = await $fetch<any>("/api/products");
       const list = Array.isArray(res) ? res : (res?.products || res?.items || []);
       if (list.length > 0) {
-        const stockMap = new Map<number, number>(list.map((p: any) => [Number(p.id), Number(p.stock)]));
+        const prodMap = new Map<number, any>(list.map((p: any) => [Number(p.id), p]));
         cart.value = cart.value.map((c) => {
-          const currentStock = stockMap.has(Number(c.id)) ? (stockMap.get(Number(c.id)) ?? 0) : c.stock;
+          const prod = prodMap.get(Number(c.id));
+          if (!prod) return c;
+          let currentStock = prod.stock;
+          if (c.variantId && prod.variants && Array.isArray(prod.variants)) {
+            const v = prod.variants.find((x: any) => x.id === c.variantId || x.color === c.color);
+            if (v) currentStock = v.stock;
+          }
           return {
             ...c,
             stock: currentStock,
@@ -90,11 +98,11 @@ export function useVape() {
   };
 
   const add = (a: AddArgs, qty = 1, silent = false) => {
-    const k = `${a.id}__${a.flavor ?? ""}__${a.nicotine ?? ""}`;
+    const k = `${a.id}__${a.variantId ?? ""}__${a.color ?? ""}__${a.flavor ?? ""}__${a.nicotine ?? ""}`;
     const ex = cart.value.find((c) => c.k === k);
     const nq = (ex?.qty ?? 0) + qty;
     if (nq > Math.min(a.stock, 99)) {
-      toast("حداکثر موجودی این محصول در سبد است.", "err");
+      toast("حداکثر موجودی این مدل در انبار به سبد افزوده شده است.", "err");
       return;
     }
     const item: VItem = {
@@ -107,6 +115,8 @@ export function useVape() {
       oldPrice: a.oldPrice,
       qty: nq,
       stock: a.stock,
+      variantId: a.variantId ?? null,
+      color: a.color ?? null,
       flavor: a.flavor ?? null,
       nicotine: a.nicotine ?? null,
     };

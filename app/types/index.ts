@@ -1,3 +1,12 @@
+export type ProductVariant = {
+  id: string;
+  name: string;
+  color?: string;
+  hex?: string;
+  stock: number;
+  image?: string;
+};
+
 export type Product = {
   id: number;
   slug: string;
@@ -10,6 +19,7 @@ export type Product = {
   rating: number; // 0..5
   reviewCount: number;
   stock: number;
+  variants?: ProductVariant[];
   brand: string;
   brandSlug: string;
   category: string;
@@ -56,10 +66,12 @@ export type CartItem = {
   image: string;
   qty: number;
   stock: number;
+  variantId?: string | null;
+  color?: string | null;
 };
 
 export type VItem = {
-  k: string; // unique key incl. flavor/nicotine
+  k: string; // unique key incl. variantId/color/flavor/nicotine
   id: number;
   slug: string;
   name: string;
@@ -68,8 +80,10 @@ export type VItem = {
   oldPrice: number | null;
   qty: number;
   stock: number;
-  flavor: string | null;
-  nicotine: string | null;
+  variantId?: string | null;
+  color?: string | null;
+  flavor?: string | null;
+  nicotine?: string | null;
 };
 
 export type VToast = {
@@ -92,6 +106,8 @@ export type OrderItemView = {
   price: number;
   qty: number;
   slug?: string | null;
+  variantId?: string | null;
+  color?: string | null;
 };
 
 export type OrderView = {
@@ -99,11 +115,18 @@ export type OrderView = {
   number: string;
   name: string;
   email: string;
+  phone?: string | null;
   subtotal: number;
   discount: number;
   shippingFee: number;
   total: number;
   status: string;
+  paymentStatus?: "unpaid" | "paid" | "failed";
+  paymentRef?: string | null;
+  paymentGateway?: string | null;
+  paymentDate?: string | null;
+  trackingCode?: string | null;
+  courier?: string | null;
   couponCode: string | null;
   createdAt: string;
   items: OrderItemView[];
@@ -139,4 +162,40 @@ export type AuthUser = {
   isAdmin?: boolean;
   createdAt?: string;
 };
+
+export type Address = {
+  id: number;
+  userId?: number | null;
+  title: string;
+  recipientName: string;
+  recipientPhone: string;
+  city: string;
+  line1: string;
+  line2?: string | null;
+  zip: string;
+  country?: string;
+  isDefault: boolean;
+  createdAt?: string;
+};
+
+export type Banner = {
+  id: number;
+  title: string;
+  subtitle?: string | null;
+  badge?: string | null;
+  image: string;
+  mobileImage?: string | null;
+  link: string;
+  buttonText: string;
+  bgGradient?: string | null;
+  textColor?: string | null;
+  position: string;
+  sortOrder: number;
+  active: boolean;
+  startDate?: string | null;
+  endDate?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 

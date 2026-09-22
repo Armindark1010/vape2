@@ -100,9 +100,11 @@ const goToCheckout = () => {
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
                 <p dir="ltr" class="truncate text-right text-[13px] font-extrabold text-snow">{{ c.name }}</p>
-                <p class="mt-0.5 text-[11px] text-mist">
+                <p class="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-mist">
+                  <span v-if="c.color" class="inline-flex items-center gap-1 rounded-md bg-ice/15 px-1.5 py-0.5 font-bold text-ice">
+                    رنگ: {{ c.color }}
+                  </span>
                   <span v-if="c.flavor">طعم: {{ c.flavor }}</span>
-                  <span v-if="c.flavor && c.nicotine"> · </span>
                   <span v-if="c.nicotine" dir="ltr">نیکوتین {{ c.nicotine }}mg</span>
                 </p>
               </div>

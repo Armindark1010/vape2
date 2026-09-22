@@ -296,7 +296,9 @@ export class SidebarComponent {
     { label: 'داشبورد آمار', path: '/dashboard', icon: '📊' },
     { label: 'مدیریت محصولات', path: '/products', icon: '📦' },
     { label: 'مدیریت سفارشات', path: '/orders', icon: '🛍️', badge: 'جدید' },
+    { label: 'مدیریت بنرها', path: '/banners', icon: '🖼️', badge: 'ویژه' },
     { label: 'استودیو اسکن 3D', path: '/studio', icon: '✨' },
     { label: 'تنظیمات سیستم', path: '/settings', icon: '⚙️', adminOnly: true },
   ];
 }
+

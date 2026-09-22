@@ -15,10 +15,12 @@ const cols: { t: string; links: [string, string][] }[] = [
   {
     t: "خدمات",
     links: [
-      ["پیگیری سفارش", "/account"],
+      ["پیگیری آنلاین مرسوله", "/track"],
+      ["حساب کاربری", "/account"],
       ["سبد خرید", "/cart"],
       ["تکمیل خرید", "/checkout"],
-      ["کیت هویت برند و لوگو", "/brand"],
+      ["پنل ادمین (Nuxt 4)", "/admin-panel"],
+      ["پنل ادمین (Angular)", "http://localhost:4200"],
     ],
   },
   {

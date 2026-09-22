@@ -77,6 +77,15 @@ export const routes: Routes = [
         title: 'مدیریت سفارشات | ویپورا',
       },
       {
+        path: 'banners',
+        loadComponent: () =>
+          import('./features/banners/banner-list/banner-list.component').then(
+            (m) => m.BannerListComponent
+          ),
+        title: 'مدیریت بنرها و اسلایدر | ویپورا',
+      },
+
+      {
         path: 'settings',
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),

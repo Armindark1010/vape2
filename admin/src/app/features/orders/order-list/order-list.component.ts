@@ -305,44 +305,50 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
       overflow: hidden;
     }
 
+    .table-responsive {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      @media (max-width: 768px) {
+        display: none;
+      }
+    }
+
     .orders-table {
       width: 100%;
+      min-width: 860px;
       border-collapse: collapse;
       font-size: 13px;
 
       th {
         text-align: right;
-        padding: 1rem 0.9rem;
+        padding: 1rem 1rem;
         color: var(--text-dim);
         font-size: 12px;
-        font-weight: 700;
-        background: rgba(0, 0, 0, 0.2);
+        font-weight: 800;
+        background: rgba(0, 0, 0, 0.35);
         border-bottom: 1px solid var(--border-subtle);
+        white-space: nowrap;
       }
 
       td {
-        padding: 0.95rem 0.9rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        padding: 1rem 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         vertical-align: middle;
+        white-space: nowrap;
 
         .city-text {
           display: block;
           font-size: 11px;
           color: var(--text-muted);
+          margin-top: 2px;
         }
       }
 
       tr:hover td {
-        background: rgba(255, 255, 255, 0.02);
+        background: rgba(255, 255, 255, 0.03);
       }
     }
 
-    .table-responsive {
-      overflow-x: auto;
-      @media (max-width: 768px) {
-        display: none;
-      }
-    }
 
     .mobile-orders-cards {
       display: none;

@@ -1,11 +1,8 @@
-import { db } from "../../db/index";
-import { orders } from "../../db/schema";
-import { eq } from "drizzle-orm";
 import { setOrderStatus } from "../../db/queries";
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
-  const { id, status } = body || {};
+  const { id, status, trackingCode, courier } = body || {};
 
   if (!id || !status) {
     throw createError({
@@ -22,17 +19,13 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  if (db) {
-    try {
-      await setOrderStatus(Number(id), status);
-      const updated = await db.select().from(orders).where(eq(orders.id, Number(id))).limit(1);
-      if (updated[0]) {
-        return { ok: true, order: updated[0] };
-      }
-    } catch (err) {
-      console.warn("Database updateOrderStatus error:", err);
-    }
-  }
+  const updated = await setOrderStatus(id, status, { trackingCode, courier });
 
-  return { ok: true, id, status, updatedAt: new Date().toISOString() };
+  return {
+    ok: true,
+    order: updated,
+    id,
+    status,
+    updatedAt: new Date().toISOString(),
+  };
 });

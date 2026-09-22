@@ -119,10 +119,13 @@ const onItemClick = (it: (typeof items)[0]) => {
         <NuxtLink to="/" class="flex items-center transition-opacity hover:opacity-90" aria-label="ویپ‌لب">
           <VapeLogo variant="horizontal" height="36" />
         </NuxtLink>
-        <nav class="flex items-center gap-8 text-[13px] font-semibold text-mist">
+        <nav class="flex items-center gap-7 text-[13px] font-semibold text-mist">
           <NuxtLink to="/" class="hover:text-snow">خانه</NuxtLink>
           <NuxtLink to="/categories" class="hover:text-snow">دسته‌بندی‌ها</NuxtLink>
           <NuxtLink to="/shop" class="hover:text-snow">فروشگاه</NuxtLink>
+          <NuxtLink to="/track" class="hover:text-snow flex items-center gap-1.5 text-vio/90 hover:text-vio font-bold">
+            <span>🚚 پیگیری سفارش</span>
+          </NuxtLink>
         </nav>
         <div class="flex items-center gap-2">
           <button

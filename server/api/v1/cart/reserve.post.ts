@@ -5,6 +5,8 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     const items: ReservationItem[] = (body?.items ?? []).map((it: any) => ({
       productId: Number(it.productId ?? it.id),
+      variantId: it.variantId ? String(it.variantId) : undefined,
+      color: it.color ? String(it.color) : undefined,
       qty: Number(it.qty) || 1,
     }));
     const existingReservationId = body?.reservationId ? String(body.reservationId) : undefined;
