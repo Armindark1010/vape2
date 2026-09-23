@@ -1,3 +1,4 @@
+import "dotenv/config";
 import pg from "pg";
 
 const { Client } = pg;
@@ -18,7 +19,9 @@ const IMG = {
 
 async function seedData() {
   const client = new Client({
-    connectionString: "postgresql://postgres:00000000@127.0.0.1:5432/vape_lifestyle_db",
+    connectionString:
+      process.env.DATABASE_URL ||
+      "postgresql://vapelab:vapelabsecret123@127.0.0.1:5433/vapelab_db",
   });
 
   try {

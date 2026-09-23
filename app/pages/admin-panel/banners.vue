@@ -43,8 +43,21 @@ const isEditMode = ref(false)
 async function fetchBanners() {
   loading.value = true
   try {
-    const res = await $fetch<{ banners: Banner[] }>('/api/admin/banners')
-    banners.value = res.banners || []
+    const res = await $fetch<any>('/api/admin/banners')
+    const list = Array.isArray(res) ? res : (res?.banners || [])
+    banners.value = list.map((b: any) => ({
+      id: b.id,
+      title: b.title,
+      subtitle: b.subtitle,
+      badge: b.badge,
+      imageUrl: b.imageUrl || b.image || '',
+      ctaText: b.ctaText || b.buttonText || 'مشاهده و خرید',
+      ctaLink: b.ctaLink || b.link || '/shop',
+      position: b.position || 'hero',
+      order: b.order ?? b.sortOrder ?? 0,
+      isActive: b.isActive !== undefined ? b.isActive : (b.active !== undefined ? b.active : true),
+      createdAt: b.createdAt
+    }))
   } catch (err) {
     console.error('Failed to load banners:', err)
   } finally {
@@ -60,7 +73,7 @@ function openCreateModal() {
     badge: 'تخفیف ویژه',
     imageUrl: 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?auto=format&fit=crop&w=1400&q=80',
     ctaText: 'خرید فوری با تخفیف',
-    ctaLink: '/products',
+    ctaLink: '/shop',
     position: 'hero',
     order: banners.value.length + 1,
     isActive: true
@@ -90,15 +103,33 @@ async function saveBanner() {
 
   saving.value = true
   try {
+    const payload = {
+      id: editingBanner.value.id,
+      title: editingBanner.value.title,
+      subtitle: editingBanner.value.subtitle,
+      badge: editingBanner.value.badge,
+      image: editingBanner.value.imageUrl,
+      imageUrl: editingBanner.value.imageUrl,
+      buttonText: editingBanner.value.ctaText,
+      ctaText: editingBanner.value.ctaText,
+      link: editingBanner.value.ctaLink,
+      ctaLink: editingBanner.value.ctaLink,
+      position: editingBanner.value.position,
+      sortOrder: editingBanner.value.order,
+      order: editingBanner.value.order,
+      active: editingBanner.value.isActive,
+      isActive: editingBanner.value.isActive
+    }
+
     if (isEditMode.value && editingBanner.value.id) {
       await $fetch('/api/admin/banners', {
         method: 'PATCH',
-        body: editingBanner.value
+        body: payload
       })
     } else {
       await $fetch('/api/admin/banners', {
         method: 'POST',
-        body: editingBanner.value
+        body: payload
       })
     }
     showEditorModal.value = false
@@ -118,6 +149,7 @@ async function toggleActive(banner: Banner) {
       method: 'PATCH',
       body: {
         id: banner.id,
+        active: newStatus,
         isActive: newStatus
       }
     })

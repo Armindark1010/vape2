@@ -1,0 +1,87 @@
+services:
+  # -------------------------------------------------------------
+  # ۱. دیتابیس اصلی پروژه (PostgreSQL)
+  # -------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: vapelab_postgres
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: vapelab
+      POSTGRES_PASSWORD: vapelabsecret123
+      POSTGRES_DB: vapelab_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # -------------------------------------------------------------
+  # ۲. پنل مدیریت گرافیکی داکر (Portainer)
+  # -------------------------------------------------------------
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: vapelab_portainer
+    restart: unless-stopped
+    ports:
+      - "9443:9443"
+      - "9002:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+  # -------------------------------------------------------------
+  # ۳. استوریج ذخیره عکس‌ها و مدلهای سه‌بعدی (MinIO)
+  # -------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: vapelab_minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: vapelabpassword123
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  # -------------------------------------------------------------
+  # ۴. فروشگاه اصلی ویپ‌لب (Nuxt 3 Storefront)
+  # -------------------------------------------------------------
+  storefront:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vapelab_storefront
+    restart: unless-stopped
+    ports:
+      - "3010:3000" # 👈 پورت ویندوز رو کردیم ۳۰۱۰ تا با پروژه دیگه‌ات تداخل نکنه
+
+    environment:
+      DATABASE_URL: postgresql://vapelab:vapelabsecret123@postgres:5432/vapelab_db
+      PORT: 3000
+      NODE_ENV: production
+    depends_on:
+      - postgres
+      - minio
+
+  # -------------------------------------------------------------
+  # ۵. پنل مدیریت اختصاصی انگولار (Angular Admin Panel)
+  # -------------------------------------------------------------
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile
+    container_name: vapelab_admin
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - storefront
+
+# تعریف ولوم‌ها برای همیشه در انتهای فایل
+volumes:
+  postgres_data:
+  portainer_data:
+  minio_data:
