@@ -29,15 +29,17 @@ export const users = pgTable("users", {
 
 export const addresses = pgTable("addresses", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  label: text("label").notNull().default("Home"),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }),
+  title: text("title").notNull().default("منزل"),
+  recipientName: text("recipient_name"),
+  recipientPhone: text("recipient_phone"),
   line1: text("line1").notNull(),
   line2: text("line2"),
-  city: text("city").notNull(),
-  zip: text("zip").notNull(),
-  country: text("country").notNull().default("United States"),
+  city: text("city").notNull().default("تهران"),
+  zip: text("zip").notNull().default(""),
+  country: text("country").notNull().default("Iran"),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
 export const brands = pgTable("brands", {
@@ -68,6 +70,9 @@ export const products = pgTable("products", {
   rating: integer("rating").notNull().default(0), // tenths of a star (e.g. 48 = 4.8)
   reviewCount: integer("review_count").notNull().default(0),
   stock: integer("stock").notNull().default(0),
+  variants: jsonb("variants").$type<
+    { id: string; name: string; color?: string; hex?: string; stock: number; image?: string }[]
+  >(),
   brandId: integer("brand_id").references(() => brands.id),
   categoryId: integer("category_id").references(() => categories.id),
   images: jsonb("images").$type<string[]>(),
@@ -109,6 +114,12 @@ export const orders = pgTable("orders", {
   shippingFee: integer("shipping_fee").notNull().default(0),
   total: integer("total").notNull(),
   status: orderStatus("status").notNull().default("pending"),
+  paymentStatus: text("payment_status").notNull().default("unpaid"),
+  paymentRef: text("payment_ref"),
+  paymentGateway: text("payment_gateway"),
+  paymentDate: timestamp("payment_date"),
+  trackingCode: text("tracking_code"),
+  courier: text("courier"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -119,6 +130,8 @@ export const orderItems = pgTable("order_items", {
     .references(() => orders.id, { onDelete: "cascade" }),
   productId: integer("product_id").references(() => products.id),
   name: text("name").notNull(),
+  variantId: text("variant_id"),
+  color: text("color"),
   image: text("image"),
   price: integer("price").notNull(),
   qty: integer("qty").notNull(),
@@ -158,3 +171,24 @@ export const contactMessages = pgTable("contact_messages", {
   message: text("message").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
+
+export const banners = pgTable("banners", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  subtitle: text("subtitle"),
+  badge: text("badge"),
+  image: text("image").notNull(),
+  mobileImage: text("mobile_image"),
+  link: text("link").notNull().default("/shop"),
+  buttonText: text("button_text").notNull().default("مشاهده و خرید"),
+  bgGradient: text("bg_gradient").default("from-vio to-ice"),
+  textColor: text("text_color").default("light"),
+  position: text("position").notNull().default("hero"),
+  sortOrder: integer("sort_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  startDate: timestamp("start_date"),
+  endDate: timestamp("end_date"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+

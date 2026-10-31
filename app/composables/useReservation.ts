@@ -113,7 +113,10 @@ export function useReservation() {
   /**
    * Request stock reservation on server
    */
-  const reserve = async (items: { id: number; qty: number }[], holdMinutes = 15) => {
+  const reserve = async (
+    items: { id: number; qty: number; variantId?: string | null; color?: string | null }[],
+    holdMinutes = 15
+  ) => {
     if (!items || items.length === 0) return false;
 
     loading.value = true;
@@ -129,7 +132,12 @@ export function useReservation() {
       }>("/api/v1/cart/reserve", {
         method: "POST",
         body: {
-          items: items.map((i) => ({ productId: i.id, qty: i.qty })),
+          items: items.map((i) => ({
+            productId: i.id,
+            variantId: i.variantId || undefined,
+            color: i.color || undefined,
+            qty: i.qty,
+          })),
           reservationId: reservationId.value || undefined,
           holdMinutes,
         },

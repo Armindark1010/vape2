@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, useId } from "vue";
+import { ref, computed, watch, useId } from "vue";
 import { useRouter } from "vue-router";
-import type { Product } from "~/types";
+import type { Product, ProductVariant } from "~/types";
 import { useVape } from "~/composables/useVape";
 import { useRestockAlerts } from "~/composables/useRestockAlerts";
 import { money, haptic } from "~/utils/vape";
@@ -30,6 +30,35 @@ const { requireAuth } = useAuth();
 const { isSubscribed, toggleRestock } = useRestockAlerts();
 const qty = ref(1);
 
+const variants = computed<ProductVariant[]>(() => props.product.variants ?? []);
+const selectedVariantId = ref<string | null>(props.product.variants?.[0]?.id ?? null);
+
+watch(
+  () => props.product.id,
+  () => {
+    selectedVariantId.value = props.product.variants?.[0]?.id ?? null;
+    qty.value = 1;
+  }
+);
+
+const activeVariant = computed(() => {
+  if (!variants.value.length) return null;
+  return variants.value.find((v: ProductVariant) => v.id === selectedVariantId.value) ?? variants.value[0];
+});
+
+const currentStock = computed(() => {
+  if (activeVariant.value) {
+    return activeVariant.value.stock;
+  }
+  return props.product.stock;
+});
+
+const selectVariant = (v: ProductVariant) => {
+  haptic(6);
+  selectedVariantId.value = v.id;
+  qty.value = 1;
+};
+
 const opts = computed<Opts | null>(() => {
   try {
     return props.product.specs?.options ? (JSON.parse(props.product.specs.options) as Opts) : null;
@@ -47,7 +76,7 @@ const pct = computed(() =>
     ? Math.round(((props.product.price - props.product.discountPrice) / props.product.price) * 100)
     : 0
 );
-const out = computed(() => props.product.stock <= 0);
+const out = computed(() => currentStock.value <= 0);
 const saved = computed(() => inWish(props.product.id));
 
 const nics = computed(() => opts.value?.nicotine ?? []);
@@ -62,10 +91,12 @@ const addToCart = (buyNow = false) => {
         id: props.product.id,
         slug: props.product.slug,
         name: props.product.name,
-        img: props.product.images[0] ?? "",
+        img: activeVariant.value?.image || (props.product.images[0] ?? ""),
         price: price.value,
         oldPrice: props.product.discountPrice != null ? props.product.price : null,
-        stock: props.product.stock,
+        stock: currentStock.value,
+        variantId: activeVariant.value?.id || null,
+        color: activeVariant.value?.color || activeVariant.value?.name || null,
         flavor: flavor.value,
         nicotine: nic.value,
       },
@@ -77,7 +108,6 @@ const addToCart = (buyNow = false) => {
     }
   }, buyNow ? "برای خرید فوری لطفاً ابتدا وارد حساب خود شوید" : "برای افزودن به سبد خرید لطفاً وارد حساب شوید");
 };
-
 
 const selectFlavor = (f: string) => {
   haptic(6);
@@ -116,11 +146,59 @@ const selectNic = (n: string) => {
       </span>
       <span class="text-dim tnum">({{ product.reviewCount }} نظر)</span>
       <span class="mx-1 text-dim">·</span>
-      <span v-if="out" class="font-extrabold text-blush">ناموجود — به‌زودی</span>
-      <span v-else-if="product.stock < 8" class="font-extrabold text-gold">فقط {{ product.stock }} عدد مونده 🔥</span>
+      <span v-if="out" class="font-extrabold text-blush">
+        {{ variants.length > 0 ? 'ناموجود در این رنگ — به‌زودی' : 'ناموجود — به‌زودی' }}
+      </span>
+      <span v-else-if="currentStock < 8" class="font-extrabold text-gold">
+        {{ variants.length > 0 ? `فقط ${currentStock} عدد در این رنگ باقی مانده 🔥` : `فقط ${currentStock} عدد مونده 🔥` }}
+      </span>
       <span v-else class="flex items-center gap-1.5 font-extrabold text-neon">
         <span class="pulse-ring h-2 w-2 rounded-full bg-neon" /> موجود در انبار
       </span>
+    </div>
+
+    <!-- انتخاب رنگ و ورینت -->
+    <div v-if="variants.length > 0" class="space-y-2.5">
+      <div class="flex items-center justify-between">
+        <p class="text-[12px] font-extrabold text-mist">
+          انتخاب رنگ:
+          <span class="font-bold text-snow mr-1">{{ activeVariant?.color || activeVariant?.name }}</span>
+        </p>
+        <span v-if="activeVariant && activeVariant.stock > 0 && activeVariant.stock <= 3" class="text-[11px] font-bold text-gold">
+          تنها {{ activeVariant.stock }} عدد در این رنگ باقی مانده 🔥
+        </span>
+      </div>
+      <div class="flex flex-wrap gap-2.5" role="radiogroup" aria-label="رنگ و ورینت">
+        <button
+          v-for="v in variants"
+          :key="v.id"
+          type="button"
+          role="radio"
+          :aria-checked="selectedVariantId === v.id"
+          class="pressable group relative flex items-center gap-2.5 rounded-2xl border px-3.5 py-2.5 transition-all duration-300 cursor-pointer"
+          :class="[
+            selectedVariantId === v.id
+              ? 'border-vio/70 bg-vio/15 shadow-[0_0_16px_rgba(167,139,250,0.25)] text-snow'
+              : 'border-white/10 bg-white/4 text-mist hover:border-white/20 hover:bg-white/7',
+            v.stock <= 0 ? 'opacity-50 grayscale' : '',
+          ]"
+          @click="selectVariant(v)"
+        >
+          <!-- دایره رنگ با پیش‌نمایش متالیک -->
+          <span
+            class="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/20 shadow-inner"
+            :style="{ backgroundColor: v.hex || '#6366f1' }"
+          >
+            <CheckIcon v-if="selectedVariantId === v.id" :size="11" class="text-white drop-shadow" />
+          </span>
+          <div class="flex flex-col text-right">
+            <span class="text-[12.5px] font-bold">{{ v.color || v.name }}</span>
+            <span class="text-[10px] tnum" :class="v.stock <= 0 ? 'text-blush' : 'text-dim'">
+              {{ v.stock <= 0 ? 'ناموجود' : `${v.stock} عدد` }}
+            </span>
+          </div>
+        </button>
+      </div>
     </div>
 
     <!-- انتخاب طعم -->
@@ -188,7 +266,7 @@ const selectNic = (n: string) => {
           :disabled="out"
           class="grid h-full w-12 place-items-center text-snow active:bg-white/8 cursor-pointer disabled:cursor-not-allowed"
           aria-label="افزایش"
-          @click="qty = Math.min(product.stock, qty + 1)"
+          @click="qty = Math.min(currentStock, qty + 1)"
         >
           <PlusIcon :size="16" />
         </button>

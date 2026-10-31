@@ -8,7 +8,7 @@ import { commitReservation } from "../utils/reservation";
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const items: { id: number; qty: number }[] = body?.items ?? [];
+    const items: { id: number; qty: number; variantId?: string; color?: string }[] = body?.items ?? [];
     const customer = body?.customer;
     const reservationId = body?.reservationId ? String(body.reservationId) : null;
 
@@ -41,16 +41,35 @@ export default defineEventHandler(async (event) => {
     for (const it of items) {
       const p = byId.get(Number(it.id));
       const qty = Math.max(1, Math.min(10, Number(it.qty) || 1));
-      if (!p) throw createError({ statusCode: 400, message: "An item in your cart is no longer available." });
-      if (p.stock < qty) {
+      if (!p) throw createError({ statusCode: 400, message: "کالای انتخابی دیگر موجود نیست." });
+
+      let currentStock = p.stock;
+      let variantName = it.color || "";
+      if (it.variantId && p.variants && Array.isArray(p.variants)) {
+        const v = p.variants.find((x: any) => x.id === it.variantId || x.color === it.color);
+        if (v) {
+          currentStock = v.stock;
+          variantName = v.color || v.name;
+        }
+      }
+
+      if (currentStock < qty) {
         throw createError({
           statusCode: 409,
-          message: `Only ${p.stock} × ${p.name} left in stock. Please adjust your cart.`,
+          message: `تنها ${currentStock} عدد از «${p.name}${variantName ? ` (${variantName})` : ''}» در انبار باقی مانده است. لطفاً سبد خود را اصلاح کنید.`,
         });
       }
       const price = p.discountPrice ?? p.price;
       subtotal += price * qty;
-      orderItems.push({ productId: p.id, name: p.name, image: (p.images ?? [])[0] ?? "", price, qty });
+      orderItems.push({
+        productId: p.id,
+        name: variantName ? `${p.name} (${variantName})` : p.name,
+        variantId: it.variantId || null,
+        color: it.color || null,
+        image: (p.images ?? [])[0] ?? "",
+        price,
+        qty,
+      });
     }
 
     let discount = 0;
@@ -65,6 +84,9 @@ export default defineEventHandler(async (event) => {
 
     const shippingFee = subtotal - discount >= FREE_SHIPPING ? 0 : FLAT_SHIPPING;
     const total = subtotal - discount + shippingFee;
+
+    const paymentMethod = body?.paymentMethod === "cod" ? "cod" : "online";
+    const isCod = paymentMethod === "cod";
 
     const number = await createOrder({
       name: String(customer.name),
@@ -82,10 +104,22 @@ export default defineEventHandler(async (event) => {
       discount,
       shippingFee,
       total,
+      status: isCod ? "processing" : "pending",
+      paymentStatus: "unpaid",
+      paymentGateway: isCod ? "cod" : "shaparak_sim",
+      courier: isCod
+        ? "پیک اکسپرس تهران (پرداخت در محل)"
+        : (customer.city === "تهران" ? "پیک ویژه اکسپرس تهران" : "پست پیشتاز هوایی"),
       items: orderItems,
     });
 
-    return { ok: true, number, total };
+    return {
+      ok: true,
+      number,
+      total,
+      paymentMethod,
+      paymentUrl: isCod ? `/order/${number}?status=cod` : `/payment/gateway?order=${number}`,
+    };
   } catch (e: any) {
     if (e?.statusCode) throw e;
     console.error("checkout error", e);

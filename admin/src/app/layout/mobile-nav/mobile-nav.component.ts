@@ -33,9 +33,9 @@ import { AuthService } from '../../core/services/auth.service';
         <span class="tab-label">سفارشات</span>
       </a>
 
-      <a href="http://localhost:3000/studio/scan" target="_blank" class="tab-item">
-        <span class="tab-icon">✨</span>
-        <span class="tab-label">اسکن 3D</span>
+      <a routerLink="/banners" routerLinkActive="active" class="tab-item">
+        <span class="tab-icon">🖼️</span>
+        <span class="tab-label">بنرها</span>
       </a>
 
       <button *ngIf="authService.isFullAdmin()" class="tab-item btn-tab" (click)="logoutPrompt()">
@@ -43,6 +43,7 @@ import { AuthService } from '../../core/services/auth.service';
         <span class="tab-label">مدیر</span>
       </button>
     </nav>
+
   `,
   styles: [`
     .mobile-bottom-bar {

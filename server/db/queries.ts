@@ -1,4 +1,4 @@
-import { desc, asc, and, eq, gte, lte, sql } from "drizzle-orm";
+import { desc, asc, and, or, eq, gte, lte, sql, inArray } from "drizzle-orm";
 import { db } from "./index";
 import {
   products,
@@ -12,6 +12,7 @@ import {
   addresses,
   subscribers,
   contactMessages,
+  banners,
   type orders as ordersTable,
 } from "./schema";
 import type {
@@ -21,9 +22,12 @@ import type {
   Review,
   OrderView,
   OrderItemView,
+  Address,
   Coupon,
   ShopFilters,
+  Banner,
 } from "~/types";
+
 import { eff } from "~/utils/format";
 
 /* ---------- products ---------- */
@@ -386,6 +390,62 @@ export async function getCoupons() {
 
 /* ---------- orders ---------- */
 
+/* ---------- in-memory orders cache for dev/fallback persistence ---------- */
+
+export const FALLBACK_ORDERS_SESSION: OrderView[] = [
+  {
+    id: 1006,
+    number: "VPR-1006",
+    name: "آرمین دارک",
+    email: "armin@vapelab.local",
+    phone: "09121234567",
+    subtotal: 2170000,
+    discount: 0,
+    shippingFee: 0,
+    total: 2170000,
+    status: "processing",
+    paymentStatus: "paid",
+    paymentRef: "RRN-9481023841",
+    paymentGateway: "shaparak_sim",
+    paymentDate: new Date(Date.now() - 3600000).toISOString(),
+    trackingCode: "TRK-IRPOST-92847192",
+    courier: "پیک ویژه اکسپرس ویپ‌لب (تحویل ۲ ساعته تهران)",
+    couponCode: null,
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    items: [
+      { name: "ELFBAR TE6000", image: FALLBACK_IMAGES.A, price: 990000, qty: 1, slug: "elfbar-te6000" },
+      { name: "VAPORA PUFF 8000", image: FALLBACK_IMAGES.B, price: 1180000, qty: 1, slug: "vapora-puff-8000" },
+    ],
+    shipping: { line1: "تهران، خیابان ولیعصر، برج سپهر، واحد ۱۲", city: "تهران", zip: "19839", country: "ایران" },
+  },
+  {
+    id: 1005,
+    number: "VPR-1005",
+    name: "آرمین دارک",
+    email: "armin@vapelab.local",
+    phone: "09121234567",
+    subtotal: 1480000,
+    discount: 0,
+    shippingFee: 0,
+    total: 1480000,
+    status: "delivered",
+    paymentStatus: "paid",
+    paymentRef: "RRN-4820194829",
+    paymentGateway: "shaparak_sim",
+    paymentDate: new Date(Date.now() - 2 * 86400000).toISOString(),
+    trackingCode: "TRK-POST-194820573",
+    courier: "پست پیشتاز جمهوری اسلامی ایران",
+    couponCode: null,
+    createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+    items: [
+      { name: "VOZOL GECKO 10000", image: FALLBACK_IMAGES.B, price: 1480000, qty: 1, slug: "vozol-gecko-10000" },
+    ],
+    shipping: { line1: "تهران، خیابان سعادت آباد، سرو غربی، پلاک ۲۴", city: "تهران", zip: "19987", country: "ایران" },
+  },
+];
+
+/* ---------- orders ---------- */
+
 export async function createOrder(input: {
   name: string;
   email: string;
@@ -397,14 +457,34 @@ export async function createOrder(input: {
   discount: number;
   shippingFee: number;
   total: number;
-  items: { productId: number; name: string; image: string; price: number; qty: number }[];
+  status?: "pending" | "processing" | "shipped" | "delivered" | "refunded";
+  paymentStatus?: string;
+  paymentGateway?: string;
+  courier?: string;
+  items: { productId: number; name: string; image: string; price: number; qty: number; variantId?: string | null; color?: string | null }[];
 }): Promise<string> {
+  const orderNumber = `VPR-${Date.now().toString().slice(-6)}`;
+
+  // Always update in-memory fallback stock
+  for (const it of input.items) {
+    const p = FALLBACK_PRODUCTS.find((x) => x.id === it.productId);
+    if (p) {
+      p.stock = Math.max(0, p.stock - it.qty);
+      if (p.variants && (it.variantId || it.color)) {
+        const v = p.variants.find((x) => x.id === it.variantId || x.color === it.color);
+        if (v) {
+          v.stock = Math.max(0, v.stock - it.qty);
+        }
+      }
+    }
+  }
+
   if (db) {
     try {
       const [order] = await db
         .insert(orders)
         .values({
-          number: `VPR-${Date.now().toString().slice(-6)}`,
+          number: orderNumber,
           userId: input.userId ?? null,
           name: input.name,
           email: input.email,
@@ -415,7 +495,10 @@ export async function createOrder(input: {
           discount: input.discount,
           shippingFee: input.shippingFee,
           total: input.total,
-          status: "pending",
+          status: input.status ?? "pending",
+          paymentStatus: input.paymentStatus ?? "unpaid",
+          paymentGateway: input.paymentGateway ?? null,
+          courier: input.courier ?? null,
         })
         .returning();
 
@@ -426,22 +509,92 @@ export async function createOrder(input: {
       for (const it of input.items) {
         await db.insert(orderItems).values({ ...it, orderId: order.id });
         if (it.productId) {
-          const p = await db.select({ stock: products.stock }).from(products).where(eq(products.id, it.productId)).limit(1);
+          const p = await db.select({ stock: products.stock, variants: products.variants }).from(products).where(eq(products.id, it.productId)).limit(1);
           const pr = p[0];
           if (pr) {
+            let updatedVariants = pr.variants;
+            if (Array.isArray(updatedVariants) && (it.variantId || it.color)) {
+              updatedVariants = updatedVariants.map((v) => {
+                if (v.id === it.variantId || v.color === it.color) {
+                  return { ...v, stock: Math.max(0, v.stock - it.qty) };
+                }
+                return v;
+              });
+            }
             await db
               .update(products)
-              .set({ stock: sql`${products.stock} - ${it.qty}` })
+              .set({
+                stock: sql`${products.stock} - ${it.qty}`,
+                variants: updatedVariants,
+              })
               .where(eq(products.id, it.productId));
           }
         }
       }
+
+      // Also track in session cache
+      FALLBACK_ORDERS_SESSION.unshift({
+        id: order.id,
+        number: order.number,
+        name: order.name,
+        email: order.email,
+        phone: order.phone,
+        subtotal: order.subtotal,
+        discount: order.discount,
+        shippingFee: order.shippingFee,
+        total: order.total,
+        status: (order.status as any) ?? "pending",
+        paymentStatus: (input.paymentStatus as any) ?? "unpaid",
+        paymentGateway: input.paymentGateway ?? null,
+        courier: input.courier ?? null,
+        couponCode: order.couponCode,
+        createdAt: order.createdAt.toISOString(),
+        items: input.items.map((i) => ({
+          name: i.name,
+          image: i.image,
+          price: i.price,
+          qty: i.qty,
+          variantId: i.variantId,
+          color: i.color,
+        })),
+        shipping: order.shipping,
+      });
+
       return order.number;
     } catch (err) {
       console.warn("Database createOrder error, using fallback number:", err);
     }
   }
-  return `VPR-${Date.now().toString().slice(-6)}`;
+
+  // Fallback in-memory save
+  const newSessionOrder: OrderView = {
+    id: Date.now(),
+    number: orderNumber,
+    name: input.name,
+    email: input.email,
+    phone: input.phone ?? null,
+    subtotal: input.subtotal,
+    discount: input.discount,
+    shippingFee: input.shippingFee,
+    total: input.total,
+    status: (input.status as any) ?? "pending",
+    paymentStatus: (input.paymentStatus as any) ?? "unpaid",
+    paymentGateway: input.paymentGateway ?? null,
+    courier: input.courier ?? null,
+    couponCode: input.couponCode ?? null,
+    createdAt: new Date().toISOString(),
+    items: input.items.map((i) => ({
+      name: i.name,
+      image: i.image,
+      price: i.price,
+      qty: i.qty,
+      variantId: i.variantId,
+      color: i.color,
+    })),
+    shipping: input.shipping,
+  };
+  FALLBACK_ORDERS_SESSION.unshift(newSessionOrder);
+  return orderNumber;
 }
 
 function mapOrderWithItems(
@@ -460,16 +613,126 @@ function mapOrderWithItems(
     number: o.number,
     name: o.name,
     email: o.email,
+    phone: o.phone,
     subtotal: o.subtotal,
     discount: o.discount,
     shippingFee: o.shippingFee,
     total: o.total,
     status: o.status,
+    paymentStatus: (o.paymentStatus as "unpaid" | "paid" | "failed") || "unpaid",
+    paymentRef: o.paymentRef,
+    paymentGateway: o.paymentGateway,
+    paymentDate: o.paymentDate ? o.paymentDate.toISOString() : null,
+    trackingCode: o.trackingCode,
+    courier: o.courier,
     couponCode: o.couponCode,
     createdAt: o.createdAt.toISOString(),
     items: mappedItems,
     shipping: o.shipping,
   };
+}
+
+export async function getOrderByNumber(orderNumber: string): Promise<OrderView | null> {
+  const norm = orderNumber.trim().toUpperCase();
+  if (db) {
+    try {
+      const rows = await db.select().from(orders).where(eq(orders.number, norm)).limit(1);
+      if (rows[0]) {
+        const items = await db.select().from(orderItems).where(eq(orderItems.orderId, rows[0].id));
+        return mapOrderWithItems(rows[0] as never, items);
+      }
+    } catch (err) {
+      console.warn("Database getOrderByNumber error:", err);
+    }
+  }
+  const match = FALLBACK_ORDERS_SESSION.find((o) => o.number.toUpperCase() === norm);
+  return match ?? null;
+}
+
+export async function updateOrderPayment(
+  orderNumber: string,
+  data: {
+    paymentStatus: "paid" | "failed";
+    paymentRef?: string;
+    paymentGateway?: string;
+    trackingCode?: string;
+    courier?: string;
+  }
+): Promise<OrderView | null> {
+  const norm = orderNumber.trim().toUpperCase();
+  const now = new Date();
+  const newStatus = data.paymentStatus === "paid" ? "processing" : "pending";
+
+  if (db) {
+    try {
+      const rows = await db.select().from(orders).where(eq(orders.number, norm)).limit(1);
+      if (rows[0]) {
+        await db
+          .update(orders)
+          .set({
+            status: newStatus,
+            paymentStatus: data.paymentStatus,
+            paymentRef: data.paymentRef ?? null,
+            paymentGateway: data.paymentGateway ?? "shaparak_sim",
+            paymentDate: now,
+            trackingCode: data.trackingCode ?? null,
+            courier: data.courier ?? null,
+          })
+          .where(eq(orders.id, rows[0].id));
+
+        const items = await db.select().from(orderItems).where(eq(orderItems.orderId, rows[0].id));
+        return mapOrderWithItems({ ...rows[0], status: newStatus, ...data, paymentDate: now } as never, items);
+      }
+    } catch (err) {
+      console.warn("Database updateOrderPayment error:", err);
+    }
+  }
+
+  // Update in session cache
+  const idx = FALLBACK_ORDERS_SESSION.findIndex((o) => o.number.toUpperCase() === norm);
+  if (idx !== -1 && FALLBACK_ORDERS_SESSION[idx]) {
+    const existing = FALLBACK_ORDERS_SESSION[idx]!;
+    existing.status = newStatus;
+    existing.paymentStatus = data.paymentStatus;
+    existing.paymentRef = data.paymentRef ?? existing.paymentRef ?? null;
+    existing.paymentGateway = data.paymentGateway ?? "shaparak_sim";
+    existing.paymentDate = now.toISOString();
+    if (data.trackingCode) existing.trackingCode = data.trackingCode;
+    if (data.courier) existing.courier = data.courier;
+    return existing;
+  }
+  return null;
+}
+
+export async function trackOrder(query: string): Promise<OrderView | null> {
+  const q = query.trim();
+  if (!q) return null;
+
+  // 1. Try by exact order number
+  const byNum = await getOrderByNumber(q);
+  if (byNum) return byNum;
+
+  // 2. Try by phone or email in db
+  if (db) {
+    try {
+      const rows = await db
+        .select()
+        .from(orders)
+        .where(sql`${orders.phone} = ${q} OR ${orders.email} = ${q}`)
+        .orderBy(desc(orders.createdAt))
+        .limit(1);
+      if (rows[0]) {
+        const items = await db.select().from(orderItems).where(eq(orderItems.orderId, rows[0].id));
+        return mapOrderWithItems(rows[0] as never, items);
+      }
+    } catch (err) {
+      console.warn("Database trackOrder error:", err);
+    }
+  }
+
+  // 3. Try by phone or email in session cache
+  const match = FALLBACK_ORDERS_SESSION.find((o) => (o.phone && o.phone.includes(q)) || (o.email && o.email.toLowerCase() === q.toLowerCase()));
+  return match ?? null;
 }
 
 export async function getOrdersByEmail(email: string): Promise<OrderView[]> {
@@ -486,43 +749,45 @@ export async function getOrdersByEmail(email: string): Promise<OrderView[]> {
       console.warn("Database getOrdersByEmail error, using fallback:", err);
     }
   }
-  return [
-    {
-      id: 1,
-      number: "VPR-1006",
-      name: "آرمین",
-      email: email,
-      subtotal: 2170000,
-      discount: 0,
-      shippingFee: 0,
-      total: 2170000,
-      status: "pending",
-      couponCode: null,
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-      items: [
-        { name: "ELFBAR TE6000", image: FALLBACK_IMAGES.A, price: 990000, qty: 1, slug: "elfbar-te6000" },
-        { name: "VAPORA PUFF 8000", image: FALLBACK_IMAGES.B, price: 1180000, qty: 1, slug: "vapora-puff-8000" },
-      ],
-      shipping: { line1: "تهران", city: "تهران", zip: "12345", country: "ایران" },
-    },
-    {
-      id: 2,
-      number: "VPR-1005",
-      name: "آرمین",
-      email: email,
-      subtotal: 1480000,
-      discount: 0,
-      shippingFee: 0,
-      total: 1480000,
-      status: "processing",
-      couponCode: null,
-      createdAt: new Date(Date.now() - 2 * 86400000).toISOString(),
-      items: [
-        { name: "VOZOL GECKO 10000", image: FALLBACK_IMAGES.B, price: 1480000, qty: 1, slug: "vozol-gecko-10000" },
-      ],
-      shipping: { line1: "تهران", city: "تهران", zip: "12345", country: "ایران" },
-    },
-  ];
+  const sessionUserOrders = FALLBACK_ORDERS_SESSION.filter((o) => o.email.toLowerCase() === email.toLowerCase());
+  return sessionUserOrders.length > 0 ? sessionUserOrders : FALLBACK_ORDERS_SESSION;
+}
+
+export async function getOrdersForUser(criteria: { email?: string; phone?: string; numbers?: string[] }): Promise<OrderView[]> {
+  const email = criteria.email?.trim().toLowerCase();
+  const phone = criteria.phone?.trim();
+  const numbers = criteria.numbers?.filter(Boolean) || [];
+
+  if (db) {
+    try {
+      const conditions = [];
+      if (email) conditions.push(eq(orders.email, email));
+      if (phone) conditions.push(eq(orders.phone, phone));
+      if (numbers.length > 0) conditions.push(inArray(orders.number, numbers));
+
+      if (conditions.length > 0) {
+        const os = await db.select().from(orders).where(or(...conditions)).orderBy(desc(orders.createdAt)).limit(50);
+        const out: OrderView[] = [];
+        for (const o of os) {
+          const items = await db.select().from(orderItems).where(eq(orderItems.orderId, o.id));
+          out.push(mapOrderWithItems(o as never, items));
+        }
+        if (out.length > 0) return out;
+      }
+    } catch (err) {
+      console.warn("Database getOrdersForUser error, using fallback:", err);
+    }
+  }
+
+  // Fallback in-memory
+  const matched = FALLBACK_ORDERS_SESSION.filter((o) => {
+    if (email && o.email?.toLowerCase() === email) return true;
+    if (phone && o.phone && o.phone.replace(/\s+/g, "") === phone.replace(/\s+/g, "")) return true;
+    if (numbers.includes(o.number)) return true;
+    return false;
+  });
+
+  return matched;
 }
 
 export async function getAllOrders(): Promise<OrderView[]> {
@@ -535,13 +800,204 @@ export async function getAllOrders(): Promise<OrderView[]> {
     }
     return out;
   }
-  return [];
+  return FALLBACK_ORDERS_SESSION;
 }
 
-export async function setOrderStatus(id: number, status: string) {
+export async function setOrderStatus(
+  orderIdOrNumber: number | string,
+  status: string,
+  extra?: { trackingCode?: string; courier?: string }
+): Promise<OrderView | null> {
+  const isNum = typeof orderIdOrNumber === "number" || !isNaN(Number(orderIdOrNumber));
+  const id = isNum ? Number(orderIdOrNumber) : null;
+  const numStr = String(orderIdOrNumber).trim().toUpperCase();
+
   if (db) {
-    await db.update(orders).set({ status: status as "pending" }).where(eq(orders.id, id));
+    try {
+      const condition = id ? eq(orders.id, id) : eq(orders.number, numStr);
+      const updateData: any = { status: status as any };
+      if (extra?.trackingCode) updateData.trackingCode = extra.trackingCode;
+      if (extra?.courier) updateData.courier = extra.courier;
+
+      await db.update(orders).set(updateData).where(condition);
+      const rows = await db.select().from(orders).where(condition).limit(1);
+      if (rows[0]) {
+        const items = await db.select().from(orderItems).where(eq(orderItems.orderId, rows[0].id));
+        return mapOrderWithItems(rows[0] as never, items);
+      }
+    } catch (err) {
+      console.warn("Database setOrderStatus error:", err);
+    }
   }
+
+  const match = FALLBACK_ORDERS_SESSION.find(
+    (o) => (id && o.id === id) || o.number.toUpperCase() === numStr
+  );
+  if (match) {
+    match.status = status;
+    if (extra?.trackingCode) match.trackingCode = extra.trackingCode;
+    if (extra?.courier) match.courier = extra.courier;
+    return match;
+  }
+  return null;
+}
+
+/* ---------- addresses ---------- */
+
+export const FALLBACK_ADDRESSES_SESSION: Address[] = [
+  {
+    id: 1,
+    userId: 1,
+    title: "منزل (تهران)",
+    recipientName: "آرمان رضایی",
+    recipientPhone: "09123456789",
+    city: "تهران",
+    line1: "سعادت‌آباد، خیابان سرو غربی، کوچه ارغوان، پلاک ۱۲، واحد ۴",
+    line2: "زنگ چهارم",
+    zip: "1998765432",
+    country: "Iran",
+    isDefault: true,
+  },
+  {
+    id: 2,
+    userId: 1,
+    title: "محل کار (کرج)",
+    recipientName: "آرمان رضایی",
+    recipientPhone: "09123456789",
+    city: "کرج",
+    line1: "جهانشهر، بلوار مولانا، نبش کوچه یاس، ساختمان پارس، طبقه ۳",
+    line2: "واحد ۸",
+    zip: "3145678901",
+    country: "Iran",
+    isDefault: false,
+  },
+];
+
+export async function getUserAddresses(userId?: number | null, phone?: string | null): Promise<Address[]> {
+  if (db && userId) {
+    try {
+      const rows = await db.select().from(addresses).where(eq(addresses.userId, userId)).orderBy(desc(addresses.isDefault), desc(addresses.id));
+      if (rows.length > 0) {
+        return rows.map((r) => ({
+          id: r.id,
+          userId: r.userId,
+          title: r.title,
+          recipientName: r.recipientName || "",
+          recipientPhone: r.recipientPhone || "",
+          line1: r.line1,
+          line2: r.line2,
+          city: r.city,
+          zip: r.zip,
+          country: r.country,
+          isDefault: r.isDefault,
+          createdAt: r.createdAt ? r.createdAt.toISOString() : undefined,
+        }));
+      }
+    } catch (err) {
+      console.warn("Database getUserAddresses error, using fallback:", err);
+    }
+  }
+
+  return FALLBACK_ADDRESSES_SESSION;
+}
+
+export async function addAddress(input: {
+  userId?: number | null;
+  title?: string;
+  recipientName: string;
+  recipientPhone: string;
+  line1: string;
+  line2?: string | null;
+  city: string;
+  zip?: string;
+  country?: string;
+  isDefault?: boolean;
+}): Promise<Address> {
+  const newId = Date.now();
+  const isDefault = !!input.isDefault;
+
+  if (isDefault) {
+    FALLBACK_ADDRESSES_SESSION.forEach((a) => (a.isDefault = false));
+  }
+
+  const newAddr: Address = {
+    id: newId,
+    userId: input.userId ?? null,
+    title: input.title || "منزل",
+    recipientName: input.recipientName,
+    recipientPhone: input.recipientPhone,
+    line1: input.line1,
+    line2: input.line2 || null,
+    city: input.city || "تهران",
+    zip: input.zip || "",
+    country: input.country || "Iran",
+    isDefault: isDefault || FALLBACK_ADDRESSES_SESSION.length === 0,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (db && input.userId) {
+    try {
+      if (isDefault) {
+        await db.update(addresses).set({ isDefault: false }).where(eq(addresses.userId, input.userId));
+      }
+      const [inserted] = await db
+        .insert(addresses)
+        .values({
+          userId: input.userId,
+          title: newAddr.title,
+          recipientName: newAddr.recipientName,
+          recipientPhone: newAddr.recipientPhone,
+          line1: newAddr.line1,
+          line2: newAddr.line2,
+          city: newAddr.city,
+          zip: newAddr.zip,
+          country: newAddr.country,
+          isDefault: newAddr.isDefault,
+        })
+        .returning();
+      if (inserted) {
+        newAddr.id = inserted.id;
+      }
+    } catch (err) {
+      console.warn("Database addAddress error, using fallback:", err);
+    }
+  }
+
+  FALLBACK_ADDRESSES_SESSION.unshift(newAddr);
+  return newAddr;
+}
+
+export async function deleteAddress(id: number, userId?: number | null): Promise<boolean> {
+  if (db) {
+    try {
+      await db.delete(addresses).where(eq(addresses.id, id));
+    } catch (err) {
+      console.warn("Database deleteAddress error:", err);
+    }
+  }
+
+  const idx = FALLBACK_ADDRESSES_SESSION.findIndex((a) => a.id === id);
+  if (idx !== -1) {
+    FALLBACK_ADDRESSES_SESSION.splice(idx, 1);
+    return true;
+  }
+  return false;
+}
+
+export async function setDefaultAddress(id: number, userId?: number | null): Promise<boolean> {
+  if (db && userId) {
+    try {
+      await db.update(addresses).set({ isDefault: false }).where(eq(addresses.userId, userId));
+      await db.update(addresses).set({ isDefault: true }).where(eq(addresses.id, id));
+    } catch (err) {
+      console.warn("Database setDefaultAddress error:", err);
+    }
+  }
+
+  FALLBACK_ADDRESSES_SESSION.forEach((a) => {
+    a.isDefault = a.id === id;
+  });
+  return true;
 }
 
 /* ---------- admin ---------- */
@@ -761,3 +1217,293 @@ export function productToCart(p: Product) {
     stock: p.stock,
   };
 }
+
+/* ---------- banners ---------- */
+
+export const FALLBACK_BANNERS: Banner[] = [
+  {
+    id: 1,
+    title: "دودِ نرم، طعمِ ناب",
+    subtitle: "تنوع بی‌نظیر جدیدترین پادهای ۱۰۰۰۰ پافی و سالت‌های ارجینال با هولوگرام اصالت",
+    badge: "⚡ پیشنهاد ویژه این هفته",
+    image: "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    mobileImage: "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=800",
+    link: "/shop?sort=popular",
+    buttonText: "مشاهده و خرید آنلاین",
+    bgGradient: "from-vio to-ice",
+    textColor: "light",
+    position: "hero",
+    sortOrder: 1,
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 2,
+    title: "تخفیف ویژه سالت‌های نستی مالزی",
+    subtitle: "تا ۱۵٪ تخفیف روی محبوب‌ترین طعم‌های Cush Man، انگور خنک و تنباکو کارامل",
+    badge: "🔥 جشنواره تابستانه",
+    image: "https://images.pexels.com/photos/14472703/pexels-photo-14472703.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    mobileImage: "https://images.pexels.com/photos/14472703/pexels-photo-14472703.jpeg?auto=compress&cs=tinysrgb&w=800",
+    link: "/shop?category=salts",
+    buttonText: "مشاهده طعم‌های سالت",
+    bgGradient: "from-amber to-rose",
+    textColor: "light",
+    position: "hero",
+    sortOrder: 2,
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 3,
+    title: "پاد سیستم ویپرسو XROS 3 Pro",
+    subtitle: "طراحی ارگونومیک، چیپست هوشمند و باتری فوق‌العاده بادوام برای استفاده روزمره",
+    badge: "✨ جدیدترین ورود بازار",
+    image: "https://images.pexels.com/photos/17962161/pexels-photo-17962161.jpeg?auto=compress&cs=tinysrgb&w=1400",
+    mobileImage: "https://images.pexels.com/photos/17962161/pexels-photo-17962161.jpeg?auto=compress&cs=tinysrgb&w=800",
+    link: "/product/vaporesso-xros-3-pro",
+    buttonText: "بررسی مشخصات و قیمت",
+    bgGradient: "from-neon to-ice",
+    textColor: "light",
+    position: "hero",
+    sortOrder: 3,
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 4,
+    title: "تا ۱۵٪ تخفیف روی همه سالت‌ها",
+    subtitle: "کد تخفیف VAPELAB15 — در صفحه پرداخت وارد کنید و از ارسال اکسپرس بهره‌مند شوید",
+    badge: "کد تخفیف اختصاصی",
+    image: "https://images.pexels.com/photos/12345382/pexels-photo-12345382.jpeg?auto=compress&cs=tinysrgb&w=1200",
+    mobileImage: "https://images.pexels.com/photos/12345382/pexels-photo-12345382.jpeg?auto=compress&cs=tinysrgb&w=800",
+    link: "/shop?category=salts",
+    buttonText: "خرید سالت با تخفیف",
+    bgGradient: "from-neon to-ice",
+    textColor: "light",
+    position: "middle",
+    sortOrder: 1,
+    active: true,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+];
+
+export async function getBanners(options?: { position?: string; activeOnly?: boolean }): Promise<Banner[]> {
+  const activeOnly = options?.activeOnly ?? true;
+  const position = options?.position;
+
+  if (db) {
+    try {
+      let conditions = [];
+      if (activeOnly) {
+        conditions.push(eq(banners.active, true));
+      }
+      if (position) {
+        conditions.push(eq(banners.position, position));
+      }
+
+      let q = db.select().from(banners);
+      if (conditions.length > 0) {
+        q = q.where(and(...conditions)) as any;
+      }
+      const rows = await q.orderBy(asc(banners.sortOrder), asc(banners.id));
+      if (rows && rows.length > 0) {
+        return rows.map((b) => ({
+          id: b.id,
+          title: b.title,
+          subtitle: b.subtitle,
+          badge: b.badge,
+          image: b.image,
+          mobileImage: b.mobileImage,
+          link: b.link,
+          buttonText: b.buttonText,
+          bgGradient: b.bgGradient,
+          textColor: b.textColor,
+          position: b.position,
+          sortOrder: b.sortOrder,
+          active: b.active,
+          startDate: b.startDate ? b.startDate.toISOString() : null,
+          endDate: b.endDate ? b.endDate.toISOString() : null,
+          createdAt: b.createdAt.toISOString(),
+          updatedAt: b.updatedAt.toISOString(),
+        }));
+      }
+    } catch (err) {
+      console.warn("Database getBanners error, fallback:", err);
+    }
+  }
+
+  let list = [...FALLBACK_BANNERS];
+  if (activeOnly) {
+    list = list.filter((b) => b.active);
+  }
+  if (position) {
+    list = list.filter((b) => b.position === position);
+  }
+  return list.sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+export async function getAdminBanners(): Promise<Banner[]> {
+  return await getBanners({ activeOnly: false });
+}
+
+export async function createBanner(input: {
+  title: string;
+  subtitle?: string;
+  badge?: string;
+  image: string;
+  mobileImage?: string;
+  link?: string;
+  buttonText?: string;
+  bgGradient?: string;
+  textColor?: string;
+  position?: string;
+  sortOrder?: number;
+  active?: boolean;
+}): Promise<Banner> {
+  const now = new Date();
+  if (db) {
+    try {
+      const [inserted] = await db
+        .insert(banners)
+        .values({
+          title: input.title,
+          subtitle: input.subtitle ?? null,
+          badge: input.badge ?? null,
+          image: input.image,
+          mobileImage: input.mobileImage ?? null,
+          link: input.link || "/shop",
+          buttonText: input.buttonText || "مشاهده و خرید",
+          bgGradient: input.bgGradient || "from-vio to-ice",
+          textColor: input.textColor || "light",
+          position: input.position || "hero",
+          sortOrder: input.sortOrder ?? 0,
+          active: input.active ?? true,
+        })
+        .returning();
+
+      if (inserted) {
+        return {
+          id: inserted.id,
+          title: inserted.title,
+          subtitle: inserted.subtitle,
+          badge: inserted.badge,
+          image: inserted.image,
+          mobileImage: inserted.mobileImage,
+          link: inserted.link,
+          buttonText: inserted.buttonText,
+          bgGradient: inserted.bgGradient,
+          textColor: inserted.textColor,
+          position: inserted.position,
+          sortOrder: inserted.sortOrder,
+          active: inserted.active,
+          startDate: inserted.startDate ? inserted.startDate.toISOString() : null,
+          endDate: inserted.endDate ? inserted.endDate.toISOString() : null,
+          createdAt: inserted.createdAt.toISOString(),
+          updatedAt: inserted.updatedAt.toISOString(),
+        };
+      }
+    } catch (err) {
+      console.warn("Database createBanner error:", err);
+    }
+  }
+
+  const newBanner: Banner = {
+    id: Date.now(),
+    title: input.title,
+    subtitle: input.subtitle ?? null,
+    badge: input.badge ?? null,
+    image: input.image,
+    mobileImage: input.mobileImage ?? null,
+    link: input.link || "/shop",
+    buttonText: input.buttonText || "مشاهده و خرید",
+    bgGradient: input.bgGradient || "from-vio to-ice",
+    textColor: input.textColor || "light",
+    position: input.position || "hero",
+    sortOrder: input.sortOrder ?? 0,
+    active: input.active ?? true,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  };
+  FALLBACK_BANNERS.push(newBanner);
+  return newBanner;
+}
+
+export async function updateBanner(
+  id: number,
+  input: Partial<{
+    title: string;
+    subtitle?: string;
+    badge?: string;
+    image: string;
+    mobileImage?: string;
+    link: string;
+    buttonText: string;
+    bgGradient: string;
+    textColor: string;
+    position: string;
+    sortOrder: number;
+    active: boolean;
+  }>
+): Promise<Banner | null> {
+  const now = new Date();
+  if (db) {
+    try {
+      const updateData: any = { ...input, updatedAt: now };
+      await db.update(banners).set(updateData).where(eq(banners.id, id));
+      const [row] = await db.select().from(banners).where(eq(banners.id, id)).limit(1);
+      if (row) {
+        return {
+          id: row.id,
+          title: row.title,
+          subtitle: row.subtitle,
+          badge: row.badge,
+          image: row.image,
+          mobileImage: row.mobileImage,
+          link: row.link,
+          buttonText: row.buttonText,
+          bgGradient: row.bgGradient,
+          textColor: row.textColor,
+          position: row.position,
+          sortOrder: row.sortOrder,
+          active: row.active,
+          startDate: row.startDate ? row.startDate.toISOString() : null,
+          endDate: row.endDate ? row.endDate.toISOString() : null,
+          createdAt: row.createdAt.toISOString(),
+          updatedAt: row.updatedAt.toISOString(),
+        };
+      }
+    } catch (err) {
+      console.warn("Database updateBanner error:", err);
+    }
+  }
+
+  const idx = FALLBACK_BANNERS.findIndex((b) => b.id === id);
+  if (idx !== -1 && FALLBACK_BANNERS[idx]) {
+    FALLBACK_BANNERS[idx] = { ...FALLBACK_BANNERS[idx]!, ...input, updatedAt: now.toISOString() };
+    return FALLBACK_BANNERS[idx]!;
+  }
+  return null;
+}
+
+export async function deleteBanner(id: number): Promise<boolean> {
+  if (db) {
+    try {
+      await db.delete(banners).where(eq(banners.id, id));
+      return true;
+    } catch (err) {
+      console.warn("Database deleteBanner error:", err);
+    }
+  }
+
+  const idx = FALLBACK_BANNERS.findIndex((b) => b.id === id);
+  if (idx !== -1) {
+    FALLBACK_BANNERS.splice(idx, 1);
+    return true;
+  }
+  return false;
+}
+

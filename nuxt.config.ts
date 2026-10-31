@@ -4,10 +4,11 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
 
   devServer: {
-    https: true,
+    https: false,
     port: 3001,
     host: '0.0.0.0',
   },
+
 
   future: {
     compatibilityVersion: 4,

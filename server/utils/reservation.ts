@@ -1,10 +1,12 @@
 import { db } from "../db";
 import { products } from "../db/schema";
-import { inArray, eq } from "drizzle-orm";
+import { inArray, eq, sql } from "drizzle-orm";
 import { FALLBACK_PRODUCTS } from "../db/fallbackData";
 
 export interface ReservationItem {
   productId: number;
+  variantId?: string | null;
+  color?: string | null;
   qty: number;
 }
 
@@ -31,16 +33,20 @@ export function cleanupExpiredReservations() {
 }
 
 /**
- * Calculate total quantity of product currently reserved by active holds
+ * Calculate total quantity of product/variant currently reserved by active holds
  */
-export function getReservedQty(productId: number, excludeReservationId?: string): number {
+export function getReservedQty(productId: number, variantId?: string | null, excludeReservationId?: string): number {
   cleanupExpiredReservations();
   let total = 0;
   for (const [id, res] of activeReservations.entries()) {
     if (excludeReservationId && id === excludeReservationId) continue;
     for (const item of res.items) {
       if (item.productId === productId) {
-        total += item.qty;
+        if (!variantId) {
+          total += item.qty;
+        } else if (item.variantId === variantId || (item.color && item.color === variantId)) {
+          total += item.qty;
+        }
       }
     }
   }
@@ -48,18 +54,41 @@ export function getReservedQty(productId: number, excludeReservationId?: string)
 }
 
 /**
- * Get available stock after subtracting active holds
+ * Get available stock after subtracting active holds (per product or per variant)
  */
-export async function getEffectiveStock(productId: number, excludeReservationId?: string): Promise<{ actualStock: number; reservedStock: number; availableStock: number; name?: string }> {
+export async function getEffectiveStock(
+  productId: number,
+  variantId?: string | null,
+  excludeReservationId?: string
+): Promise<{
+  actualStock: number;
+  reservedStock: number;
+  availableStock: number;
+  name?: string;
+  variantName?: string;
+}> {
   let actualStock = 0;
   let name = "";
+  let variantName = "";
+  let variants: any[] = [];
 
   if (db) {
     try {
-      const rows = await db.select({ id: products.id, stock: products.stock, name: products.name }).from(products).where(eq(products.id, productId)).limit(1);
+      const rows = await db
+        .select({
+          id: products.id,
+          stock: products.stock,
+          name: products.name,
+          variants: products.variants,
+        })
+        .from(products)
+        .where(eq(products.id, productId))
+        .limit(1);
+
       if (rows[0]) {
         actualStock = rows[0].stock;
         name = rows[0].name;
+        variants = rows[0].variants || [];
       }
     } catch {
       // fallback
@@ -71,13 +100,79 @@ export async function getEffectiveStock(productId: number, excludeReservationId?
     if (p) {
       actualStock = p.stock;
       name = p.name;
+      variants = p.variants || [];
     }
   }
 
-  const reservedStock = getReservedQty(productId, excludeReservationId);
+  // If specific variant requested, check variant stock
+  if (variantId && variants.length > 0) {
+    const v = variants.find((x) => x.id === variantId || x.color === variantId || x.name === variantId);
+    if (v) {
+      actualStock = v.stock;
+      variantName = v.color || v.name;
+    }
+  }
+
+  const reservedStock = getReservedQty(productId, variantId, excludeReservationId);
   const availableStock = Math.max(0, actualStock - reservedStock);
 
-  return { actualStock, reservedStock, availableStock, name };
+  return {
+    actualStock,
+    reservedStock,
+    availableStock,
+    name: variantName ? `${name} (${variantName})` : name,
+    variantName,
+  };
+}
+
+/**
+ * Reduce stock permanently in database and fallback data (for orders)
+ */
+export async function reduceVariantStock(
+  productId: number,
+  qty: number,
+  variantId?: string | null,
+  color?: string | null
+): Promise<void> {
+  // 1. Update in-memory fallback products
+  const p = FALLBACK_PRODUCTS.find((x) => x.id === productId);
+  if (p) {
+    p.stock = Math.max(0, p.stock - qty);
+    if (p.variants && (variantId || color)) {
+      const v = p.variants.find((x) => x.id === variantId || x.color === color);
+      if (v) {
+        v.stock = Math.max(0, v.stock - qty);
+      }
+    }
+  }
+
+  // 2. Update DB if connected
+  if (db) {
+    try {
+      const rows = await db.select().from(products).where(eq(products.id, productId)).limit(1);
+      const pr = rows[0];
+      if (pr) {
+        let updatedVariants = pr.variants;
+        if (Array.isArray(updatedVariants) && (variantId || color)) {
+          updatedVariants = updatedVariants.map((v) => {
+            if (v.id === variantId || v.color === color) {
+              return { ...v, stock: Math.max(0, v.stock - qty) };
+            }
+            return v;
+          });
+        }
+        await db
+          .update(products)
+          .set({
+            stock: sql`${products.stock} - ${qty}`,
+            variants: updatedVariants,
+          })
+          .where(eq(products.id, productId));
+      }
+    } catch (err) {
+      console.warn("Database reduceVariantStock error:", err);
+    }
+  }
 }
 
 /**
@@ -104,12 +199,12 @@ export async function createOrRenewReservation(
   // Validate stock for all items
   for (const it of items) {
     const qty = Math.max(1, Math.min(99, Number(it.qty) || 1));
-    const stockInfo = await getEffectiveStock(it.productId, existingReservationId);
+    const stockInfo = await getEffectiveStock(it.productId, it.variantId || it.color, existingReservationId);
 
     if (stockInfo.availableStock < qty) {
       return {
         ok: false,
-        error: `موجودی کالای "${stockInfo.name || it.productId}" برای رزرو کافی نیست.`,
+        error: `موجودی «${stockInfo.name || it.productId}» برای رزرو کافی نیست (موجودی آزاد: ${stockInfo.availableStock} عدد).`,
         conflictItem: {
           productId: it.productId,
           name: stockInfo.name || String(it.productId),
@@ -130,7 +225,12 @@ export async function createOrRenewReservation(
 
   activeReservations.set(reservationId, {
     id: reservationId,
-    items: items.map((i) => ({ productId: Number(i.productId), qty: Number(i.qty) })),
+    items: items.map((i) => ({
+      productId: Number(i.productId),
+      variantId: i.variantId ? String(i.variantId) : null,
+      color: i.color ? String(i.color) : null,
+      qty: Number(i.qty),
+    })),
     createdAt: now,
     expiresAt: expiresAtMs,
   });

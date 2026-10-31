@@ -107,9 +107,12 @@ const decrement = (k: string, currentQty: number) => {
                 <NuxtLink :to="`/product/${c.slug}`" dir="ltr" class="block truncate text-right text-[14px] font-extrabold text-snow">
                   {{ c.name }}
                 </NuxtLink>
-                <p class="mt-1 text-[11.5px] text-mist">
+                <p class="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px] text-mist">
+                  <span v-if="c.color" class="inline-flex items-center gap-1 rounded-md bg-ice/15 px-1.5 py-0.5 font-bold text-ice">
+                    رنگ: {{ c.color }}
+                  </span>
                   <span v-if="c.flavor">طعم: {{ c.flavor }}</span>
-                  <span v-if="c.nicotine" dir="ltr"> · نیکوتین {{ c.nicotine }}mg</span>
+                  <span v-if="c.nicotine" dir="ltr">نیکوتین {{ c.nicotine }}mg</span>
                 </p>
                 <p class="mt-2 text-[13px] font-extrabold text-neon tnum">{{ money(c.price * c.qty) }}</p>
               </div>

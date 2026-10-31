@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { Product, Category } from "~/types";
+import type { Product, Category, Banner } from "~/types";
 import VaporBackground from "~/components/vapor/VaporBackground.vue";
+import BannerSlider from "~/components/vapor/BannerSlider.vue";
+import BannerPromo from "~/components/vapor/BannerPromo.vue";
 import ProductCard from "~/components/vapor/ProductCard.vue";
 import CategorySlider from "~/components/vapor/CategorySlider.vue";
 import SectionRow from "~/components/vapor/SectionRow.vue";
@@ -19,10 +21,21 @@ useSeoMeta({
   ogImage: "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=1200",
 });
 
+const { data: heroBanners } = await useFetch<Banner[]>("/api/banners", {
+  query: { position: "hero" },
+  default: () => [],
+});
+
+const { data: promoBanners } = await useFetch<Banner[]>("/api/banners", {
+  query: { position: "middle" },
+  default: () => [],
+});
+
 const { data: allProducts } = await useFetch<Product[]>("/api/products", {
   query: { limit: 40 },
   default: () => [],
 });
+
 
 const { data: categories } = await useFetch<Category[]>("/api/categories", {
   default: () => [],
@@ -141,6 +154,11 @@ const deal = computed(
       </div>
     </div>
 
+    <!-- ─────────────── اسلایدر بنرهای داینامیک متصل به دیتابیس ─────────────── -->
+    <section v-if="heroBanners && heroBanners.length > 0" class="wrap mt-8 sm:mt-12">
+      <BannerSlider :banners="heroBanners" />
+    </section>
+
     <!-- دسته‌بندی‌ها -->
     <CategorySlider :cats="(categories || []).map((c) => ({ slug: c.slug, name: c.name, count: c.count, image: c.image }))" />
 
@@ -153,8 +171,9 @@ const deal = computed(
       </ProductRail>
     </SectionRow>
 
-    <!-- بنر پروموشن -->
-    <section class="wrap mt-12">
+    <!-- بنر پروموشن متصل به دیتابیس -->
+    <BannerPromo v-if="promoBanners && promoBanners.length > 0" :banner="promoBanners[0]" />
+    <section v-else class="wrap mt-12">
       <div class="relative overflow-hidden rounded-[26px] border border-neon/20">
         <img :src="PROMO_IMG" alt="" class="absolute inset-0 h-full w-full object-cover" loading="lazy" />
         <div class="absolute inset-0 bg-gradient-to-l from-ink/95 via-ink/80 to-ink/40" />
@@ -178,6 +197,7 @@ const deal = computed(
         </div>
       </div>
     </section>
+
 
     <!-- پرفروش‌ها -->
     <SectionRow title="پرفروش‌ترین‌ها 🔥" sub="آنچه واپرها بیشتر از همه دوستشون دارن" href="/shop?sort=popular">
