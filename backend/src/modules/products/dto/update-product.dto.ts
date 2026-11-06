@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ProductType } from '@prisma/client';
+import { ProductType } from '../enums/product-type.enum';
 import { Type } from 'class-transformer';
 import {
   IsArray,

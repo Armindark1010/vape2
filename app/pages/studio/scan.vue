@@ -149,7 +149,7 @@ const isAutoScanning = ref(false);
 const autoCountdown = ref(3);
 let autoTimer: any = null;
 
-const currentZone = computed(() => anatomyZones[currentZoneIndex.value] || anatomyZones[0]);
+const currentZone = computed(() => (anatomyZones[currentZoneIndex.value] || anatomyZones[0])! );
 const progressPct = computed(
   () => Math.round((capturedPhotos.value.length / anatomyZones.length) * 100)
 );
@@ -228,7 +228,7 @@ const loadCameras = async () => {
           !c.label.toLowerCase().includes("infrared")
       );
       if (!selectedDeviceId.value) {
-        selectedDeviceId.value = normalCam ? normalCam.deviceId : videoInputs[0].deviceId;
+        selectedDeviceId.value = normalCam ? normalCam.deviceId : (videoInputs[0]?.deviceId || "");
       }
     }
   } catch (err) {

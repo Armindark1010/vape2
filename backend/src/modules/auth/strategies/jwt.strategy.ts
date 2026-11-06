@@ -4,8 +4,9 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { PrismaService } from '../../../database/prisma.service';
 
 export interface JwtPayload {
-  sub: string;
-  phoneNumber: string;
+  sub: number | string;
+  email?: string;
+  username?: string;
   role: string;
 }
 
@@ -13,15 +14,26 @@ export interface JwtPayload {
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(private readonly prisma: PrismaService) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req: any) => req?.cookies?.vapelab_token || null,
+      ]),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_SECRET || 'vape_super_secret_jwt_key_2026_phase_1',
+      secretOrKey: process.env.JWT_SECRET || 'vapelab_production_jwt_super_secret_key_2026_9837482',
     });
   }
 
   async validate(payload: JwtPayload) {
+    const userId = Number(payload.sub);
+    if (!userId || Number.isNaN(userId)) {
+      throw new UnauthorizedException('Token payload is invalid');
+    }
+
     const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
+      where: { id: userId },
+      include: {
+        supplier: true,
+      },
     });
 
     if (!user) {

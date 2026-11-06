@@ -9,26 +9,18 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "typecheck": "vue-tsc --noEmit",
-    "test:reservation": "node scripts/test-reservation.mjs",
-    "next:dev": "next dev",
-    "next:build": "next build"
+    "test:reservation": "node scripts/test-reservation.mjs"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.17",
-    "@types/three": "^0.185.4",
     "dotenv": "17.3.1",
-    "drizzle-orm": "0.45.2",
     "nuxt": "^3.16.0",
-    "pg": "8.20.0",
     "tailwindcss": "4.1.17",
-    "three": "^0.186.0",
     "vue": "^3.5.13"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
     "@types/node": "22.19.15",
-    "@types/pg": "8.18.0",
-    "drizzle-kit": "0.31.10",
     "tsx": "^4.23.13",
     "typescript": "5.9.3",
     "vite": "^8.3.0",

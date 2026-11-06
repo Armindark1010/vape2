@@ -1,211 +1,204 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { useRoute } from "vue-router";
-import {
-  ChevronLeftIcon,
-  SearchIcon,
-  CheckIcon,
-} from "~/components/vapor/VIcons";
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useAuth } from '~/composables/useAuth';
 
 const route = useRoute();
-const sidebarOpen = ref(false);
-const mobileNavOpen = ref(false);
+const router = useRouter();
+const { user, isLoggedIn } = useAuth();
 
-const navItems = [
-  { label: "داشبورد آمار", path: "/admin-panel", icon: "📊", badge: "" },
-  { label: "مدیریت محصولات", path: "/admin-panel/products", icon: "📦", badge: "" },
-  { label: "مدیریت سفارشات", path: "/admin-panel/orders", icon: "🛍️", badge: "جدید" },
-  { label: "مدیریت بنرها", path: "/admin-panel/banners", icon: "🖼️", badge: "ویژه" },
+interface NavLink {
+  label: string;
+  to: string;
+  icon: string;
+  badge?: string;
+}
+
+interface NavGroup {
+  name: string;
+  items: NavLink[];
+}
+
+const navigationGroups: NavGroup[] = [
+  {
+    name: 'Overview',
+    items: [
+      { label: 'داشبورد آمار و تحلیل', to: '/admin-panel', icon: 'overview' },
+    ],
+  },
+  {
+    name: 'Marketplace',
+    items: [
+      { label: 'کالاها و محصولات', to: '/admin-panel/products', icon: 'products' },
+      { label: 'دسته‌بندی‌ها', to: '/admin-panel/categories', icon: 'categories' },
+      { label: 'برندها', to: '/admin-panel/brands', icon: 'brands' },
+      { label: 'سفارشات مشتریان', to: '/admin-panel/orders', icon: 'orders', badge: 'جدید' },
+      { label: 'مشتریان پلتفرم', to: '/admin-panel/customers', icon: 'customers' },
+    ],
+  },
+  {
+    name: 'Supplier Management',
+    items: [
+      { label: 'لیست تأمین‌کنندگان', to: '/admin-panel/suppliers', icon: 'suppliers' },
+      { label: 'ایجاد تأمین‌کننده جدید', to: '/admin-panel/suppliers/create', icon: 'plus' },
+      { label: 'کالاهای تخصیص‌یافته', to: '/admin-panel/suppliers#products', icon: 'products' },
+      { label: 'سفارشات تأمین‌کنندگان', to: '/admin-panel/suppliers#orders', icon: 'shipping' },
+      { label: 'عملکرد تأمین‌کنندگان', to: '/admin-panel/suppliers#performance', icon: 'commission' },
+    ],
+  },
+  {
+    name: 'Finance',
+    items: [
+      { label: 'بررسی اجمالی مالی', to: '/admin-panel/finance', icon: 'finance' },
+      { label: 'کمیسیون و درآمد پلتفرم', to: '/admin-panel/finance#commissions', icon: 'commission' },
+      { label: 'بچ‌های تسویه حساب', to: '/admin-panel/finance/settlements', icon: 'settlements', badge: 'تسویه' },
+      { label: 'مانده حساب تأمین‌کنندگان', to: '/admin-panel/finance#balances', icon: 'balance' },
+      { label: 'دفتر روزنامه تراکنش‌ها', to: '/admin-panel/finance#journal', icon: 'journal' },
+    ],
+  },
+  {
+    name: 'Marketing',
+    items: [
+      { label: 'مدیریت بنرها', to: '/admin-panel/banners', icon: 'banners', badge: 'ویژه' },
+      { label: 'کدهای تخفیف', to: '/admin-panel/marketing/coupons', icon: 'coupons' },
+      { label: 'کمپین‌های فروش', to: '/admin-panel/marketing/campaigns', icon: 'campaigns' },
+    ],
+  },
+  {
+    name: 'Platform',
+    items: [
+      { label: 'تنظیمات عمومی', to: '/admin-panel/settings', icon: 'settings' },
+      { label: 'تنظیمات کمیسیون', to: '/admin-panel/settings#commission', icon: 'zap' },
+      { label: 'درگاه‌های پرداخت', to: '/admin-panel/settings#payment', icon: 'finance' },
+      { label: 'حمل و نقل و پیک', to: '/admin-panel/settings#shipping', icon: 'shipping' },
+      { label: 'تنظیمات اعلان‌ها', to: '/admin-panel/settings#notifications', icon: 'notifications' },
+    ],
+  },
+  {
+    name: 'Access Management',
+    items: [
+      { label: 'مدیران سیستم', to: '/admin-panel/access/admins', icon: 'security' },
+      { label: 'نقش‌ها و دسترسی‌ها', to: '/admin-panel/access/roles', icon: 'roles' },
+      { label: 'لاگ فعالیت‌ها', to: '/admin-panel/access/audit', icon: 'audit' },
+    ],
+  },
 ];
 
-const closeMobile = () => {
-  mobileNavOpen.value = false;
+const collapsedGroups = ref<{ [key: string]: boolean }>({});
+
+const toggleGroup = (name: string) => {
+  collapsedGroups.value[name] = !collapsedGroups.value[name];
 };
+
+const isLinkActive = (to: string) => {
+  if (to === '/admin-panel') {
+    return route.path === '/admin-panel';
+  }
+  if (to.includes('#')) {
+    return route.fullPath.includes(to);
+  }
+  return route.path === to || route.path.startsWith(to + '/');
+};
+
+onMounted(() => {
+  if (!isLoggedIn.value || (user.value?.role !== 'ADMIN' && !user.value?.isAdmin)) {
+    if (route.path !== '/admin-panel/login') {
+      router.replace('/admin-panel/login');
+    }
+  }
+});
 </script>
 
 <template>
-  <div class="min-h-screen bg-[#09090b] text-[#f8fafc] font-sans selection:bg-vio selection:text-white antialiased" dir="rtl">
-    <!-- لایه پس‌زمینه محو -->
-    <div class="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(120%_80%_at_50%_0%,rgba(167,139,250,0.06),transparent_60%)]" />
+  <DashboardUDashboardGroup>
+    <!-- Official Nuxt Dashboard Sidebar -->
+    <DashboardUDashboardSidebar>
+      <!-- Top Slot: Workspace / Store Selector -->
+      <template #header="{ collapsed }">
+        <DashboardTeamsMenu
+          :collapsed="collapsed"
+          title="ویپ‌لب — مدیریت ارشد"
+          subtitle="VAPELAB Marketplace Admin"
+          badge="Nuxt Pro"
+          icon="nuxt"
+        />
+      </template>
 
-    <div class="relative z-10 flex min-h-screen">
-      <!-- ─────────────── سایدبار دسکتاپ ─────────────── -->
-      <aside
-        class="hidden lg:flex w-68 shrink-0 flex-col border-l border-white/8 bg-[#101218]/90 backdrop-blur-xl sticky top-0 h-screen z-30"
-      >
-        <!-- برند و لوگو -->
-        <div class="h-18 flex items-center justify-between px-6 border-b border-white/8">
-          <div class="flex items-center gap-3">
-            <span class="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-vio/30 to-ice/20 border border-vio/40 text-[20px] shadow-lg shadow-vio/20">
-              💨
-            </span>
-            <div>
-              <h2 class="font-display text-[15px] font-black text-snow tracking-tight">ویپ‌لب ادمین</h2>
-              <span class="text-[11px] text-mist font-medium">نسخه Nuxt 4 Ultra</span>
+      <!-- Main Navigation Menu -->
+      <template #default="{ collapsed }">
+        <!-- Search Trigger Button -->
+        <div class="mb-4">
+          <DashboardUDashboardSearch :collapsed="collapsed" />
+        </div>
+
+        <!-- Navigation Groups -->
+        <div class="space-y-4">
+          <div v-for="group in navigationGroups" :key="group.name" class="space-y-1">
+            <!-- Group Header -->
+            <div
+              v-if="!collapsed"
+              class="flex items-center justify-between px-2.5 py-1 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider cursor-pointer hover:text-zinc-300 select-none transition"
+              @click="toggleGroup(group.name)"
+            >
+              <span>{{ group.name }}</span>
+              <svg
+                class="w-3 h-3 text-zinc-500 transition-transform duration-150"
+                :class="{ 'rotate-180': collapsedGroups[group.name] }"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+
+            <!-- Group Links -->
+            <div v-show="!collapsedGroups[group.name]" class="space-y-0.5">
+              <NuxtLink
+                v-for="item in group.items"
+                :key="item.to"
+                :to="item.to"
+                class="group flex items-center justify-between rounded-xl px-2.5 py-2 text-[12.5px] transition-all duration-150"
+                :class="[
+                  isLinkActive(item.to)
+                    ? 'bg-[#00DC82]/10 text-[#00DC82] font-bold border border-[#00DC82]/25 shadow-sm shadow-[#00DC82]/5'
+                    : 'text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-100 border border-transparent font-medium'
+                ]"
+                :title="collapsed ? item.label : undefined"
+              >
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <DashboardIcon
+                    :name="item.icon"
+                    :size="17"
+                    :class="isLinkActive(item.to) ? 'text-[#8B5CF6]' : 'text-zinc-400 group-hover:text-zinc-200'"
+                  />
+                  <span v-if="!collapsed" class="truncate">
+                    {{ item.label }}
+                  </span>
+                </div>
+
+                <span
+                  v-if="item.badge && !collapsed"
+                  class="rounded-full bg-[#8B5CF6]/15 border border-[#8B5CF6]/30 px-1.5 py-0.2 text-[9.5px] font-bold text-[#8B5CF6] shrink-0"
+                >
+                  {{ item.badge }}
+                </span>
+              </NuxtLink>
             </div>
           </div>
         </div>
+      </template>
 
-        <!-- منوی ناوبری -->
-        <nav class="flex-1 px-3.5 py-6 space-y-1.5 overflow-y-auto">
-          <NuxtLink
-            v-for="item in navItems"
-            :key="item.path"
-            :to="item.path"
-            class="group flex items-center justify-between rounded-2xl px-4 py-3 text-[13.5px] font-bold transition-all duration-200"
-            :class="[
-              route.path === item.path
-                ? 'bg-gradient-to-l from-vio/20 to-ice/10 text-snow border border-vio/35 shadow-lg shadow-vio/10'
-                : 'text-mist hover:bg-white/4 hover:text-snow border border-transparent'
-            ]"
-          >
-            <div class="flex items-center gap-3">
-              <span class="text-[18px] transition-transform group-hover:scale-110">{{ item.icon }}</span>
-              <span>{{ item.label }}</span>
-            </div>
-            <span
-              v-if="item.badge"
-              class="rounded-full bg-rose-500/20 border border-rose-500/30 px-2 py-0.5 text-[10px] font-black text-rose-300"
-            >
-              {{ item.badge }}
-            </span>
-          </NuxtLink>
-        </nav>
+      <!-- Bottom Slot: User Profile Menu -->
+      <template #footer="{ collapsed }">
+        <DashboardUserMenu :collapsed="collapsed" />
+      </template>
+    </DashboardUDashboardSidebar>
 
-        <!-- فوتر سایدبار و لینک به فروشگاه -->
-        <div class="p-4 border-t border-white/8 bg-black/20">
-          <NuxtLink
-            to="/"
-            target="_blank"
-            class="flex items-center justify-between rounded-xl border border-white/10 bg-white/4 px-4 py-2.5 text-[12px] font-bold text-mist hover:text-snow hover:border-vio/40 hover:bg-white/8 transition"
-          >
-            <span class="flex items-center gap-2">
-              <span>🏪</span>
-              <span>مشاهده فروشگاه</span>
-            </span>
-            <span class="text-[11px] text-vio font-mono">↗</span>
-          </NuxtLink>
-        </div>
-      </aside>
+    <!-- Main Content Panel Slot -->
+    <slot />
 
-      <!-- ─────────────── سایدبار دراور موبایل ─────────────── -->
-      <div
-        v-if="mobileNavOpen"
-        class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md lg:hidden transition-opacity"
-        @click="closeMobile"
-      >
-        <div
-          class="fixed right-0 top-0 bottom-0 w-72 bg-[#12141c] border-l border-white/10 p-5 flex flex-col z-50 shadow-2xl"
-          @click.stop
-        >
-          <div class="flex items-center justify-between pb-4 border-b border-white/10">
-            <div class="flex items-center gap-2.5">
-              <span class="text-[22px]">💨</span>
-              <h3 class="text-[15px] font-black text-snow">ویپ‌لب ادمین</h3>
-            </div>
-            <button class="h-8 w-8 rounded-lg bg-white/5 border border-white/10 text-mist hover:text-white grid place-items-center" @click="closeMobile">
-              ✕
-            </button>
-          </div>
-
-          <nav class="flex-1 py-4 space-y-1.5 overflow-y-auto">
-            <NuxtLink
-              v-for="item in navItems"
-              :key="item.path"
-              :to="item.path"
-              class="flex items-center justify-between rounded-xl px-4 py-3 text-[13.5px] font-bold"
-              :class="[
-                route.path === item.path
-                  ? 'bg-vio/20 text-snow border border-vio/40'
-                  : 'text-mist hover:bg-white/5'
-              ]"
-              @click="closeMobile"
-            >
-              <div class="flex items-center gap-3">
-                <span>{{ item.icon }}</span>
-                <span>{{ item.label }}</span>
-              </div>
-              <span v-if="item.badge" class="text-[10px] text-rose-300">{{ item.badge }}</span>
-            </NuxtLink>
-          </nav>
-
-          <NuxtLink
-            to="/"
-            target="_blank"
-            class="rounded-xl border border-white/10 bg-white/5 p-3 text-center text-[12px] font-bold text-mist hover:text-white"
-          >
-            🏪 مشاهده فروشگاه اصلی
-          </NuxtLink>
-        </div>
-      </div>
-
-      <!-- ─────────────── محتوای اصلی و هدر ─────────────── -->
-      <div class="flex-1 flex flex-col min-w-0 pb-20 lg:pb-8">
-        <!-- هدر بالای صفحه -->
-        <header class="h-18 sticky top-0 z-20 border-b border-white/8 bg-[#09090b]/85 backdrop-blur-xl px-4 sm:px-8 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <button
-              class="lg:hidden h-10 w-10 rounded-xl border border-white/10 bg-white/5 text-snow grid place-items-center cursor-pointer"
-              @click="mobileNavOpen = true"
-            >
-              ☰
-            </button>
-            <div class="flex items-center gap-2">
-              <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span class="text-[12.5px] font-bold text-mist hidden sm:inline">اتصال دیتابیس PostgreSQL:</span>
-              <span class="text-[12px] font-mono font-bold text-emerald-300 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-md">
-                آنلاین (Live)
-              </span>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <NuxtLink
-              to="/"
-              class="hidden sm:inline-flex items-center gap-2 h-9 px-4 rounded-xl border border-white/12 bg-white/4 hover:bg-white/8 text-[12px] font-bold text-snow transition"
-            >
-              <span>🛒 فروشگاه</span>
-            </NuxtLink>
-
-            <a
-              href="http://localhost:4200"
-              target="_blank"
-              class="inline-flex items-center gap-2 h-9 px-3.5 rounded-xl border border-vio/30 bg-vio/10 hover:bg-vio/20 text-[11.5px] font-extrabold text-vio transition"
-              title="مشاهده پنل انگولار در پورت ۴۲۰۰"
-            >
-              <span>🅰️ پنل انگولار (4200)</span>
-            </a>
-
-            <div class="flex items-center gap-2 pl-2 border-r border-white/10">
-              <span class="h-8 w-8 rounded-full bg-gradient-to-tr from-vio to-ice text-ink font-black text-[12px] grid place-items-center">
-                👑
-              </span>
-              <span class="text-[12.5px] font-bold text-snow hidden md:inline">مدیر ارشد سیستم</span>
-            </div>
-          </div>
-        </header>
-
-        <!-- محتوای صفحات -->
-        <main class="flex-1 p-4 sm:p-8">
-          <slot />
-        </main>
-      </div>
-    </div>
-
-    <!-- ─────────────── نوبار لمسی پایین موبایل ─────────────── -->
-    <nav class="lg:hidden fixed bottom-0 inset-x-0 z-40 h-16 bg-[#10121a]/95 backdrop-blur-xl border-t border-white/10 flex items-center justify-around px-2 pb-[env(safe-area-inset-bottom,0px)]">
-      <NuxtLink
-        v-for="item in navItems"
-        :key="item.path"
-        :to="item.path"
-        class="flex flex-col items-center justify-center gap-1 flex-1 py-1 text-[11px] font-bold transition-all"
-        :class="[
-          route.path === item.path ? 'text-vio' : 'text-mist hover:text-snow'
-        ]"
-      >
-        <span class="text-[18px]">{{ item.icon }}</span>
-        <span>{{ item.label.replace('مدیریت ', '') }}</span>
-      </NuxtLink>
-    </nav>
-  </div>
+    <!-- Global Notifications Slideover -->
+    <DashboardNotificationsSlideover />
+  </DashboardUDashboardGroup>
 </template>

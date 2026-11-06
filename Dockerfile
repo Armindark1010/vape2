@@ -1,37 +1,41 @@
 # -------------------------------------------------------------
-# مرحله اول: ساخت و کامپایل پروژه (Build Stage)
+# VAPELAB Unified Storefront & Nuxt Dashboard Admin Dockerfile
+# Multi-stage production build for Nuxt 3 / Nitro
 # -------------------------------------------------------------
+
+# Stage 1: Build & Compile
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# کپی کردن فایل‌های پکیج برای استفاده از کش لایه‌های داکر
+RUN apk add --no-cache libc6-compat
+
 COPY package*.json ./
 
-# نصب وابستگی‌ها
 RUN npm install
 
-# کپی کردن کل سورس کد به داخل داکر
 COPY . .
 
-# بیلد کردن پروژه Nuxt 3 برای پروداکشن
+# Build Nuxt 3 production output (.output)
 RUN npm run build
 
-# -------------------------------------------------------------
-# مرحله دوم: اجرای بسیار سبک نسخه نهایی (Production Runner)
-# -------------------------------------------------------------
+# Stage 2: Production Runner
 FROM node:20-alpine AS runner
 
 WORKDIR /app
+
+RUN apk add --no-cache curl
 
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 
-# فقط خروجی تمیز و کامپایل‌شده مرحله قبل را برمی‌داریم
+# Copy compiled standalone Nitro server
 COPY --from=builder /app/.output ./.output
 
 EXPOSE 3000
 
-# روشن کردن سرور سریع Nitro در Nuxt
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 0
+
 CMD ["node", ".output/server/index.mjs"]

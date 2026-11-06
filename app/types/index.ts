@@ -160,6 +160,7 @@ export type AuthUser = {
   phoneNumber?: string | null;
   role?: string;
   isAdmin?: boolean;
+  supplier?: { id: number; companyName: string; isActive?: boolean } | null;
   createdAt?: string;
 };
 

@@ -85,11 +85,11 @@ const stopAutoPlay = () => {
 };
 
 const onTouchStart = (e: TouchEvent) => {
-  touchStartX.value = e.changedTouches[0].clientX;
+  touchStartX.value = e.changedTouches[0]?.clientX || 0;
 };
 
 const onTouchEnd = (e: TouchEvent) => {
-  touchEndX.value = e.changedTouches[0].clientX;
+  touchEndX.value = e.changedTouches[0]?.clientX || 0;
   handleSwipe();
 };
 

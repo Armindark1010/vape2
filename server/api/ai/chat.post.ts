@@ -1,4 +1,4 @@
-import { getProducts, getCategories, getBrands } from "../../db/queries";
+
 import type { Product } from "~/types";
 
 type UserAnswer = {
@@ -26,9 +26,9 @@ export type ProductRecommendation = {
 
 export default defineEventHandler(async (event) => {
   const body = (await readBody(event)) as AIRequest;
-  const allProducts = await getProducts({}, 100);
-  const categories = await getCategories();
-  const brands = await getBrands();
+  const allProducts = (await $fetch<any[]>("http://127.0.0.1:4000/api/products?limit=100").catch(() => [])) as any;
+  const categories = (await $fetch<any[]>("http://127.0.0.1:4000/api/categories").catch(() => [])) as any;
+  const brands = (await $fetch<any[]>("http://127.0.0.1:4000/api/brands").catch(() => [])) as any;
 
   // 1. اگر کوییز ارسال شده باشد
   if (body.wizard) {

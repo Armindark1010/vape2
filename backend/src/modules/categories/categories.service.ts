@@ -4,8 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
-import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -18,7 +16,7 @@ export class CategoriesService {
           select: { products: true },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { id: 'asc' },
     });
 
     return categories.map((cat) => ({
@@ -27,8 +25,8 @@ export class CategoriesService {
       slug: cat.slug,
       description: cat.description,
       image: cat.image,
+      featured: cat.featured,
       productCount: cat._count.products,
-      createdAt: cat.createdAt,
     }));
   }
 
@@ -56,11 +54,13 @@ export class CategoriesService {
     };
   }
 
-  async findById(id: string) {
+  async findById(id: number) {
     const category = await this.prisma.category.findUnique({
       where: { id },
       include: {
-        _count: { select: { products: true } },
+        _count: {
+          select: { products: true },
+        },
       },
     });
 
@@ -68,39 +68,50 @@ export class CategoriesService {
       throw new NotFoundException(`Category with ID '${id}' not found`);
     }
 
-    return category;
+    return {
+      ...category,
+      productCount: category._count.products,
+    };
   }
 
-  async create(dto: CreateCategoryDto) {
-    const existing = await this.prisma.category.findUnique({
-      where: { slug: dto.slug },
-    });
-
-    if (existing) {
-      throw new BadRequestException(
-        `Category with slug '${dto.slug}' already exists`,
-      );
-    }
+  async create(data: {
+    name: string;
+    slug?: string;
+    description?: string;
+    image?: string;
+    featured?: boolean;
+  }) {
+    if (!data.name) throw new BadRequestException('نام دسته‌بندی الزامی است');
+    const slug = data.slug?.trim() || data.name.toLowerCase().trim().replace(/[\s\W-]+/g, '-');
 
     return this.prisma.category.create({
-      data: dto,
+      data: {
+        name: data.name,
+        slug,
+        description: data.description || null,
+        image: data.image || null,
+        featured: data.featured ?? true,
+      },
     });
   }
 
-  async update(id: string, dto: UpdateCategoryDto) {
-    await this.findById(id);
+  async update(id: number, data: any) {
+    const category = await this.prisma.category.findUnique({ where: { id } });
+    if (!category) throw new NotFoundException('دسته‌بندی یافت نشد');
 
     return this.prisma.category.update({
       where: { id },
-      data: dto,
+      data: {
+        ...(data.name && { name: data.name }),
+        ...(data.slug && { slug: data.slug }),
+        description: data.description !== undefined ? data.description : category.description,
+        image: data.image !== undefined ? data.image : category.image,
+        featured: data.featured !== undefined ? Boolean(data.featured) : category.featured,
+      },
     });
   }
 
-  async remove(id: string) {
-    await this.findById(id);
-
-    return this.prisma.category.delete({
-      where: { id },
-    });
+  async delete(id: number) {
+    return this.prisma.category.delete({ where: { id } });
   }
 }

@@ -20,7 +20,7 @@ useSeoMeta({
   title: "تکمیل سفارش",
 });
 
-const { cart, cartTotal, clear, ageOk, hydrated, hasOutOfStockItems, outOfStockItems, revalidateCart, remove } = useVape();
+const { cart, cartTotal, clear, ageOk, hydrated, hasOutOfStockItems, outOfStockItems, revalidateCart, remove, toast } = useVape();
 const { user, isLoggedIn, openAuth } = useAuth();
 const { reservationId, isReserved, isExpired, reserve, release } = useReservation();
 const { addresses, loading: loadingAddresses, fetchAddresses, addAddress: saveNewAddress } = useAddresses();
@@ -34,9 +34,53 @@ const saveAddressForLater = ref(true);
 const newAddressTitle = ref("منزل");
 const showAddressEdit = ref(false);
 
+
+// Regex & Validation Helpers for Iranian Addresses and Identity
+const isPhoneOrDigits = (val?: string | null): boolean => {
+  if (!val) return false;
+  const clean = val.replace(/[\s\-_+()]/g, '');
+  return /^\d+$/.test(clean) || /^(\+?98|0)?9\d{9}$/.test(clean);
+};
+
+const toEnglishDigits = (str: string): string => {
+  if (!str) return '';
+  return str
+    .replace(/[۰-۹]/g, (d) => String(d.charCodeAt(0) - 1776))
+    .replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632));
+};
+
+const normalizePhone = (phone?: string | null): string => {
+  if (!phone) return '';
+  let p = toEnglishDigits(phone).replace(/[\s\-_()]/g, '');
+  if (p.startsWith('+98')) p = '0' + p.slice(3);
+  if (p.startsWith('0098')) p = '0' + p.slice(4);
+  if (p.startsWith('98')) p = '0' + p.slice(2);
+  if (p.startsWith('9') && p.length === 10) p = '0' + p;
+  return p;
+};
+
+// Safe Name resolver: NEVER allow digits or phone numbers to populate as a person name!
+const getValidPersonName = (candidate?: string | null): string => {
+  if (!candidate) return '';
+  const trimmed = candidate.trim();
+  if (isPhoneOrDigits(trimmed)) return '';
+  if (/\d|[0-9]|[۰-۹]/.test(trimmed)) return '';
+  if (!/[\u0600-\u06FFa-zA-Z]/.test(trimmed)) return '';
+  return trimmed;
+};
+
+// Strict Name Regex: Persian/English letters only, spaces, half-space, min 3 chars, max 40 chars
+const NAME_REGEX = /^[\u0600-\u06FFa-zA-Z\s\u200C]{3,40}$/;
+
+// Strict Iranian Mobile Regex: 11 digits starting with 09
+const MOBILE_REGEX = /^09\d{9}$/;
+
+// Strict Postal Code Regex: 10 numeric digits
+const POSTAL_CODE_REGEX = /^\d{10}$/;
+
 const f = ref({
-  name: user.value?.name || "",
-  phone: user.value?.phone || "",
+  name: getValidPersonName(user.value?.name),
+  phone: normalizePhone(user.value?.phone || user.value?.phoneNumber || ""),
   city: "تهران",
   addr: "",
   zip: "",
@@ -45,12 +89,21 @@ const f = ref({
 
 const selectAddress = (addr: Address) => {
   selectedAddressId.value = addr.id;
-  f.value.name = addr.recipientName;
-  f.value.phone = addr.recipientPhone;
-  f.value.city = addr.city;
-  f.value.addr = addr.line1 + (addr.line2 ? ` - ${addr.line2}` : "");
-  f.value.zip = addr.zip || "";
-  showAddressEdit.value = false;
+  const resolvedName = getValidPersonName(addr.recipientName) || getValidPersonName(user.value?.name) || getValidPersonName(f.value.name);
+  const resolvedPhone = normalizePhone(addr.recipientPhone || user.value?.phone || f.value.phone || "");
+
+  f.value.name = resolvedName;
+  f.value.phone = resolvedPhone;
+  f.value.city = addr.city || "تهران";
+  f.value.addr = addr.line1 + (addr.line2 ? ' - ' + addr.line2 : '');
+  f.value.zip = toEnglishDigits(addr.zip || "");
+
+  // If name or phone is empty, open edit form automatically
+  if (!f.value.name || !f.value.phone || !f.value.addr || f.value.addr.length < 8) {
+    showAddressEdit.value = true;
+  } else {
+    showAddressEdit.value = false;
+  }
   haptic(15);
 };
 
@@ -74,8 +127,9 @@ watch(
 const initCheckout = async () => {
   await revalidateCart();
   if (user.value) {
-    if (!f.value.name && user.value.name) f.value.name = user.value.name;
-    if (!f.value.phone && user.value.phone) f.value.phone = user.value.phone;
+    const validCandidateName = getValidPersonName(user.value.name);
+    if (!f.value.name && validCandidateName) f.value.name = validCandidateName;
+    if (!f.value.phone && user.value.phone) f.value.phone = normalizePhone(user.value.phone);
   }
   // Fetch saved addresses from server and local storage
   const loadedAddrs = await fetchAddresses();
@@ -115,18 +169,105 @@ const shipping = computed(() =>
 const total = computed(() => cartTotal.value + shipping.value);
 
 const place = async () => {
+  // مرحله ۱: بررسی ورود به حساب کاربری
+  if (!isLoggedIn.value) {
+    const msg = "ثبت نهایی سفارش مستلزم ورود به حساب کاربری است. لطفاً ابتدا وارد حساب خود شوید.";
+    err.value = msg;
+    toast(msg, "err");
+    openAuth("login");
+    return;
+  }
+
+  // مرحله ۲: بررسی سن بالای ۱۸ سال
   if (!ageOk.value) {
-    err.value = "برای خرید ابتدا باید سن بالای ۱۸ سال خود را تأیید کنید (گیت سن ابتدای سایت).";
+    const msg = "برای خرید از ویپ‌لب، ابتدا باید سن بالای ۱۸ سال خود را تأیید کنید.";
+    err.value = msg;
+    toast(msg, "err");
     return;
   }
-  if (f.value.name.trim().length < 3 || f.value.addr.trim().length < 6 || f.value.phone.trim().length < 10) {
-    err.value = "نام، شماره موبایل و آدرس را کامل وارد کنید.";
+
+  // پاکسازی و استانداردسازی مقادیر ورودی
+  const rawName = String(f.value.name || "").trim();
+  const rawPhone = normalizePhone(f.value.phone);
+  const rawAddr = String(f.value.addr || "").trim();
+  const rawZip = toEnglishDigits(f.value.zip || "").replace(/\D/g, "");
+
+  // بررسی ریجکس نام تحویل‌گیرنده (فقط حروف فارسی/انگلیسی - بدون عدد یا شماره موبایل)
+  if (isPhoneOrDigits(rawName) || /\d|[0-9]|[۰-۹]/.test(rawName)) {
+    showAddressEdit.value = true;
+    const msg = "شماره موبایل یا عدد نباید در فیلد نام قرار گیرد! لطفاً نام و نام خانوادگی واقعی گیرنده را با حروف بنویسید.";
+    err.value = msg;
+    toast(msg, "err");
+    haptic(30);
+    if (typeof window !== "undefined") window.scrollTo({ top: 180, behavior: "smooth" });
     return;
   }
+
+  if (!NAME_REGEX.test(rawName)) {
+    showAddressEdit.value = true;
+    const msg = "نام و نام خانوادگی نامعتبر است! لطفاً حداقل ۳ حرف (فقط حروف فارسی یا انگلیسی بدون عدد و نماد) وارد کنید.";
+    err.value = msg;
+    toast(msg, "err");
+    haptic(30);
+    if (typeof window !== "undefined") window.scrollTo({ top: 180, behavior: "smooth" });
+    return;
+  }
+
+  // بررسی ریجکس شماره موبایل گیرنده (۱۱ رقم با 09)
+  if (!MOBILE_REGEX.test(rawPhone)) {
+    showAddressEdit.value = true;
+    const msg = "شماره موبایل گیرنده نامعتبر است! شماره باید ۱۱ رقم با فرمت ۰۹۱۲۳۴۵۶۷۸۹ باشد.";
+    err.value = msg;
+    toast(msg, "err");
+    haptic(30);
+    if (typeof window !== "undefined") window.scrollTo({ top: 180, behavior: "smooth" });
+    return;
+  }
+
+  // بررسی ریجکس نشانی پستی (حداقل ۸ کاراکتر و دارای نام خیابان/پلاک)
+  if (rawAddr.length < 8 || !/[\u0600-\u06FFa-zA-Z]/.test(rawAddr) || /^(\W|\d)+$/.test(rawAddr)) {
+    showAddressEdit.value = true;
+    const msg = "نشانی تحویل ناقص است! لطفاً آدرس پستی دقیق شامل خیابان، کوچه و پلاک را بنویسید.";
+    err.value = msg;
+    toast(msg, "err");
+    haptic(30);
+    if (typeof window !== "undefined") window.scrollTo({ top: 180, behavior: "smooth" });
+    return;
+  }
+
+  // بررسی ریجکس کد پستی (در صورت وارد شدن باید ۱۰ رقمی باشد)
+  if (rawZip && !POSTAL_CODE_REGEX.test(rawZip)) {
+    showAddressEdit.value = true;
+    const msg = "کد پستی باید دقیقاً یک عدد ۱۰ رقمی معتبر باشد.";
+    err.value = msg;
+    toast(msg, "err");
+    haptic(30);
+    if (typeof window !== "undefined") window.scrollTo({ top: 180, behavior: "smooth" });
+    return;
+  }
+
+  // به‌روزرسانی مقادیر تمیزشده در فرم
+  f.value.name = rawName;
+  f.value.phone = rawPhone;
+  f.value.addr = rawAddr;
+  f.value.zip = rawZip;
+
+  // مرحله ۳: توست موفقیت اعتبارسنجی مشخصات
+  toast("اطلاعات گیرنده و آدرس تحویل با موفقیت تأیید شد ✓", "ok");
+  haptic(15);
+
   busy.value = true;
   err.value = "";
+
+  // مرحله ۴: توست اطلاع‌رسانی آغاز ثبت سفارش و اتصال به درگاه
+  if (paymentMethod.value === "online") {
+    toast("در حال آماده‌سازی درگاه سندباکس زرین‌پال...", "ok");
+  } else {
+    toast("در حال ثبت سفارش پرداخت در محل...", "ok");
+  }
+
   try {
-    const customerEmail = user.value?.email || `${f.value.phone.trim()}@vapelab.local`;
+    const customerEmail = user.value?.email || (rawPhone + "@vapelab.local");
     const d = await $fetch<{ ok: boolean; number: string; total?: number; paymentUrl?: string; error?: string }>("/api/checkout", {
       method: "POST",
       body: {
@@ -140,53 +281,73 @@ const place = async () => {
         paymentMethod: paymentMethod.value,
         couponCode: null,
         customer: {
-          name: f.value.name.trim(),
+          name: rawName,
           email: customerEmail,
-          phone: f.value.phone.trim(),
-          line1: f.value.addr.trim(),
-          line2: f.value.note.trim() || undefined,
-          city: f.value.city,
-          zip: f.value.zip.trim() || "00000",
+          phone: rawPhone,
+          line1: rawAddr,
+          line2: f.value.note ? f.value.note.trim() : undefined,
+          city: f.value.city || "تهران",
+          zip: rawZip || "00000",
           country: "Iran",
         },
       },
     });
+
     haptic(20);
+
+    // ذخیره نشانی جدید در دفترچه اگر انتخاب شده باشد
     if (selectedAddressId.value === "new" && saveAddressForLater.value) {
       try {
         await saveNewAddress({
           title: newAddressTitle.value || "منزل",
-          recipientName: f.value.name.trim(),
-          recipientPhone: f.value.phone.trim(),
-          city: f.value.city,
-          line1: f.value.addr.trim(),
-          zip: f.value.zip.trim(),
+          recipientName: rawName,
+          recipientPhone: rawPhone,
+          city: f.value.city || "تهران",
+          line1: rawAddr,
+          zip: rawZip || "00000",
           isDefault: addresses.value.length === 0,
         });
       } catch {}
     }
-    if (d?.number && typeof window !== "undefined") {
+
+    // ذخیره شماره سفارش در تاریخچه لوکال
+    if (d && d.number && typeof window !== "undefined") {
       try {
         const raw = localStorage.getItem("vapora.my_orders");
-        const list: string[] = raw ? JSON.parse(raw) : [];
+        const list = raw ? JSON.parse(raw) : [];
         if (!list.includes(d.number)) {
           list.unshift(d.number);
           localStorage.setItem("vapora.my_orders", JSON.stringify(list.slice(0, 30)));
         }
       } catch {}
     }
+
     clear();
     await release();
-    if (d.paymentUrl) {
-      await navigateTo(d.paymentUrl);
+
+    // مرحله ۵: توست هدایت به درگاه یا نمایش فاکتور
+    if (d && d.paymentUrl) {
+      toast("هدایت به درگاه پرداخت سندباکس زرین‌پال...", "ok");
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          window.location.href = (d.paymentUrl as string);
+        }, 500);
+      } else {
+        await navigateTo(d.paymentUrl, { external: true });
+      }
       return;
     }
-    done.value = d.number;
+
+    toast(`سفارش ${d.number} با موفقیت ثبت شد ✓`, "ok");
+    done.value = d ? d.number : "";
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0 });
     }
   } catch (e2: any) {
-    err.value = e2?.data?.message || e2?.message || "خطا در ثبت سفارش";
+    const errorMsg = e2?.data?.message || e2?.message || "خطا در برقراری ارتباط و ثبت سفارش";
+    err.value = errorMsg;
+    toast(errorMsg, "err");
+    haptic(35);
   } finally {
     busy.value = false;
   }
@@ -352,7 +513,10 @@ const place = async () => {
                   <span>📍 ارسال به: {{ f.city }}، {{ f.addr }}</span>
                 </div>
                 <div class="text-[11px] text-mist mt-1">
-                  تحویل‌گیرنده: <strong class="text-snow">{{ f.name }}</strong> ({{ f.phone }})
+                  تحویل‌گیرنده: <strong class="text-snow">{{ f.name || 'نامشخص' }}</strong> ({{ f.phone || 'تلفن ثبت نشده' }})
+                  <div v-if="!f.name || !f.phone" class="mt-2 text-[11px] text-amber-400 font-bold">
+                    ⚠️ نام یا شماره گیرنده ثبت نشده است — لطفاً روی ویرایش جزئیات کلیک کنید.
+                  </div>
                   <span v-if="f.zip" class="mr-2">· کد پستی: {{ f.zip }}</span>
                 </div>
               </div>
@@ -382,12 +546,30 @@ const place = async () => {
 
               <div class="grid gap-3 sm:grid-cols-2">
                 <label class="block">
-                  <span class="mb-1 block text-[11.5px] font-bold text-dim">نام و نام خانوادگی گیرنده *</span>
-                  <input v-model="f.name" class="input" placeholder="مثلاً آرمان رضایی" required />
+                  <span class="mb-1 block text-[11.5px] font-bold text-dim flex items-center justify-between">
+                    <span>نام و نام خانوادگی گیرنده *</span>
+                    <span class="text-[10px] text-violet-300 font-normal">فقط حروف فارسی (بدون عدد)</span>
+                  </span>
+                  <input
+                    v-model="f.name"
+                    class="input"
+                    placeholder="مثلاً آرمان رضایی"
+                    @input="f.name = f.name.replace(/[\d0-9۰-۹]/g, '')"
+                  />
                 </label>
                 <label class="block">
-                  <span class="mb-1 block text-[11.5px] font-bold text-dim">شماره موبایل گیرنده *</span>
-                  <input v-model="f.phone" class="input" dir="ltr" inputmode="tel" placeholder="0912 345 6789" required />
+                  <span class="mb-1 block text-[11.5px] font-bold text-dim flex items-center justify-between">
+                    <span>شماره موبایل گیرنده *</span>
+                    <span class="text-[10px] text-violet-300 font-normal">۱۱ رقم با فرمت ۰۹</span>
+                  </span>
+                  <input
+                    v-model="f.phone"
+                    class="input"
+                    dir="ltr"
+                    inputmode="tel"
+                    placeholder="0912 345 6789"
+                    @input="f.phone = toEnglishDigits(f.phone).replace(/[^\d+]/g, '')"
+                  />
                 </label>
                 <label class="block">
                   <span class="mb-1 block text-[11.5px] font-bold text-dim">شهر مقصد *</span>
@@ -396,12 +578,23 @@ const place = async () => {
                   </select>
                 </label>
                 <label class="block">
-                  <span class="mb-1 block text-[11.5px] font-bold text-dim">کد پستی ۱۰ رقمی</span>
-                  <input v-model="f.zip" class="input" dir="ltr" placeholder="مثلاً 1458963251" />
+                  <span class="mb-1 block text-[11.5px] font-bold text-dim flex items-center justify-between">
+                    <span>کد پستی ۱۰ رقمی</span>
+                    <span class="text-[10px] text-mist font-normal">۱۰ رقم بدون خط تیره</span>
+                  </span>
+                  <input
+                    v-model="f.zip"
+                    class="input"
+                    dir="ltr"
+                    inputmode="numeric"
+                    placeholder="مثلاً 1458963251"
+                    maxlength="10"
+                    @input="f.zip = toEnglishDigits(f.zip).replace(/\D/g, '').slice(0, 10)"
+                  />
                 </label>
                 <label class="block sm:col-span-2">
                   <span class="mb-1 block text-[11.5px] font-bold text-dim">نشانی کامل پستی (خیابان، پلاک، واحد) *</span>
-                  <input v-model="f.addr" class="input" placeholder="خیابان اصلی، کوچه، پلاک، زنگ یا واحد" required />
+                  <input v-model="f.addr" class="input" placeholder="خیابان اصلی، کوچه، پلاک، زنگ یا واحد" />
                 </label>
                 <label class="block sm:col-span-2">
                   <span class="mb-1 block text-[11.5px] font-bold text-dim">توضیحات تحویل یا یادداشت به پیک (اختیاری)</span>
@@ -578,7 +771,7 @@ const place = async () => {
           </p>
 
           <button
-            :disabled="busy || hasOutOfStockItems"
+            type="button" @click="place" :disabled="busy || hasOutOfStockItems"
             class="pressable mt-5 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-l from-vio to-ice text-[15px] font-extrabold text-ink glow-v disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <span v-if="busy" class="h-5 w-5 animate-spin rounded-full border-2 border-ink border-t-transparent" />

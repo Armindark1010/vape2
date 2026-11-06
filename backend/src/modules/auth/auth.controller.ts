@@ -5,6 +5,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -14,6 +15,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { Response } from 'express';
 import { User } from '@prisma/client';
 import { AuthService } from './auth.service';
 import {
@@ -32,89 +34,89 @@ export class AuthController {
 
   @Post('send-otp')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // OWASP: Max 5 OTP requests per minute per IP
-  @ApiOperation({
-    summary: 'Send OTP verification code to mobile phone via Kavenegar (Rate limited: 5/min)',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'OTP code generated and dispatched (with debug/simulated code in dev)',
-  })
-  @ApiResponse({
-    status: HttpStatus.TOO_MANY_REQUESTS,
-    description: 'Rate limit exceeded (ThrottlerException)',
-  })
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: 'Send OTP verification code' })
   async sendOtp(@Body() dto: SendOtpDto) {
     return this.authService.sendOtp(dto);
   }
 
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // OWASP: Max 5 attempts per minute
-  @ApiOperation({
-    summary: 'Verify OTP code and retrieve JWT access token (Master OTP bypass: 11111)',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'OTP verified successfully; returns JWT access token and user info',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid or expired OTP code',
-  })
-  async verifyOtp(@Body() dto: VerifyOtpDto) {
-    return this.authService.verifyOtp(dto);
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @ApiOperation({ summary: 'Verify OTP code' })
+  async verifyOtp(@Body() dto: VerifyOtpDto, @Res({ passthrough: true }) res: Response) {
+    const authData = await this.authService.verifyOtp(dto);
+    this.setAuthCookie(res, authData.accessToken);
+    return authData;
   }
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({
-    summary: 'Register new user with username or mobile and bcrypt hashed password',
-  })
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'User registered successfully and JWT issued',
-  })
-  @ApiResponse({
-    status: HttpStatus.BAD_REQUEST,
-    description: 'User already exists or validation error (password policy mismatch)',
-  })
-  async register(@Body() dto: RegisterDto) {
-    return this.authService.register(dto);
+  @ApiOperation({ summary: 'Register with username/mobile and password' })
+  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
+    const authData = await this.authService.register(dto);
+    this.setAuthCookie(res, authData.accessToken);
+    return authData;
   }
 
   @Post('login-password')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } }) // OWASP: Protection against credential stuffing
-  @ApiOperation({
-    summary: 'Login with username or mobile and password (Rate limited: 5/min)',
-  })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Authentication successful; returns JWT access token and user info',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Invalid username or password',
-  })
-  async loginPassword(@Body() dto: LoginWithPasswordDto) {
-    return this.authService.loginWithPassword(dto);
+  @ApiOperation({ summary: 'Login with username/mobile and password' })
+  async loginWithPassword(
+    @Body() dto: LoginWithPasswordDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const authData = await this.authService.loginWithPassword(dto);
+    this.setAuthCookie(res, authData.accessToken);
+    return authData;
   }
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get current authenticated user profile' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Current user profile retrieved successfully',
-  })
-  @ApiResponse({
-    status: HttpStatus.UNAUTHORIZED,
-    description: 'Unauthorized access / Missing or invalid Bearer token',
-  })
-  async getProfile(@CurrentUser() user: User) {
-    return user;
+  @ApiOperation({ summary: 'Get current user profile and role' })
+  async getMe(@CurrentUser() user: any) {
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phone,
+        username: user.username,
+        role: user.role,
+        isAdmin: user.role === 'ADMIN' || user.isAdmin === true,
+        supplier: user.supplier
+          ? {
+              id: user.supplier.id,
+              companyName: user.supplier.companyName,
+              isActive: user.supplier.isActive,
+            }
+          : null,
+      },
+    };
+  }
+
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout and clear auth cookie' })
+  async logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('vapelab_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    });
+    return { success: true, message: 'Logged out successfully' };
+  }
+
+  private setAuthCookie(res: Response, token: string) {
+    if (!res || !res.cookie) return;
+    res.cookie('vapelab_token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+    });
   }
 }

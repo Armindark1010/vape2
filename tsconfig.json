@@ -6,8 +6,9 @@
   },
   "exclude": [
     "node_modules",
-    "src",
+    "backend",
     "scripts",
-    "next.config.ts"
+    "dist",
+    ".output"
   ]
 }

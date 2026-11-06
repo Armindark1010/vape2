@@ -1,5 +1,4 @@
 import { SITE } from "~/utils/vape";
-import { getProducts } from "../db/queries";
 
 export default defineEventHandler(async (event) => {
   const staticRoutes = [
@@ -9,12 +8,13 @@ export default defineEventHandler(async (event) => {
     "/cart",
     "/checkout",
     "/account",
+    "/admin-panel",
   ];
 
   let productSlugs: string[] = [];
   try {
-    const products = await getProducts({}, 200);
-    productSlugs = products.map((p) => p.slug);
+    const products = await $fetch<any[]>("http://127.0.0.1:4000/api/products?limit=200").catch(() => []);
+    productSlugs = (products || []).map((p: any) => p.slug).filter(Boolean);
   } catch {
     /* fallback */
   }

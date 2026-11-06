@@ -101,7 +101,7 @@ export function useAddresses() {
       const fallbackId = Date.now()
       const fallbackAddr: Address = {
         id: fallbackId,
-        userId: user.value?.id ? String(user.value.id) : undefined,
+        userId: user.value?.id ? Number(user.value.id) : undefined,
         title: payload.title || 'منزل',
         recipientName: payload.recipientName,
         recipientPhone: payload.recipientPhone,

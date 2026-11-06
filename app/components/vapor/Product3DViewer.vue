@@ -314,7 +314,7 @@ const animateSmoke = () => {
     positions[i * 3 + 1] += velocities[i].y;
     positions[i * 3 + 2] += velocities[i].z;
 
-    if (positions[i * 3 + 1] > 4.2) {
+    if ((positions[i * 3 + 1] ?? 0) > 4.2) {
       positions[i * 3] = (Math.random() - 0.5) * 0.15;
       positions[i * 3 + 1] = 2.3;
       positions[i * 3 + 2] = (Math.random() - 0.5) * 0.15;

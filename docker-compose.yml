@@ -1,87 +1,172 @@
+version: '3.8'
+
 services:
-  # -------------------------------------------------------------
-  # ۱. دیتابیس اصلی پروژه (PostgreSQL)
-  # -------------------------------------------------------------
+  # -------------------------------------------------------------------
+  # 1. دیتابیس اصلی سیستم (PostgreSQL)
+  # -------------------------------------------------------------------
   postgres:
     image: postgres:16-alpine
     container_name: vapelab_postgres
     restart: unless-stopped
     ports:
-      - "5433:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     environment:
-      POSTGRES_USER: vapelab
-      POSTGRES_PASSWORD: vapelabsecret123
-      POSTGRES_DB: vapelab_db
+      POSTGRES_USER: ${POSTGRES_USER:-vapelab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vapelabsecret123}
+      POSTGRES_DB: ${POSTGRES_DB:-vapelab_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vapelab} -d ${POSTGRES_DB:-vapelab_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vapelab_net
 
-  # -------------------------------------------------------------
-  # ۲. پنل مدیریت گرافیکی داکر (Portainer)
-  # -------------------------------------------------------------
-  portainer:
-    image: portainer/portainer-ce:latest
-    container_name: vapelab_portainer
+  # -------------------------------------------------------------------
+  # 2. سرویس کش و مدیریت صف‌ها (Redis)
+  # -------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: vapelab_redis
     restart: unless-stopped
     ports:
-      - "9443:9443"
-      - "9002:9000"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - portainer_data:/data
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vapelab_net
 
-  # -------------------------------------------------------------
-  # ۳. استوریج ذخیره عکس‌ها و مدلهای سه‌بعدی (MinIO)
-  # -------------------------------------------------------------
+  # -------------------------------------------------------------------
+  # 3. ذخیره‌سازی ابری فایل‌ها و تصاویر (MinIO Object Storage)
+  # -------------------------------------------------------------------
   minio:
     image: minio/minio:latest
     container_name: vapelab_minio
     restart: unless-stopped
+    command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT:-9000}:9000"       # S3 API Endpoint
+      - "${MINIO_CONSOLE_PORT:-9001}:9001" # Web Console UI
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: vapelabpassword123
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-vapelabpassword123}
     volumes:
       - minio_data:/data
-    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vapelab_net
 
-  # -------------------------------------------------------------
-  # ۴. فروشگاه اصلی ویپ‌لب (Nuxt 3 Storefront)
-  # -------------------------------------------------------------
-  storefront:
+  # -------------------------------------------------------------------
+  # 4. اسکریپت آماده‌سازی خودکار باکت MinIO (Provisioning)
+  # -------------------------------------------------------------------
+  minio-provision:
+    image: minio/mc:latest
+    container_name: vapelab_minio_provision
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - vapelab_net
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Configuring MinIO client...';
+      until /usr/bin/mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-admin} ${MINIO_ROOT_PASSWORD:-vapelabpassword123}; do
+        echo 'Waiting for MinIO server...';
+        sleep 2;
+      done;
+      /usr/bin/mc mb --ignore-existing local/${MINIO_BUCKET:-vapelab-media};
+      /usr/bin/mc anonymous set download local/${MINIO_BUCKET:-vapelab-media};
+      echo 'MinIO bucket [${MINIO_BUCKET:-vapelab-media}] ready with public download policy!';
+      exit 0;
+      "
+
+  # -------------------------------------------------------------------
+  # 5. هسته بک‌اند (NestJS API Service)
+  # -------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: vapelab_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-provision:
+        condition: service_completed_successfully
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vapelab}:${POSTGRES_PASSWORD:-vapelabsecret123}@postgres:5432/${POSTGRES_DB:-vapelab_db}
+      JWT_SECRET: ${JWT_SECRET:-vapelab_production_jwt_super_secret_key_2026_9837482}
+      JWT_EXPIRES_IN: 7d
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_PORT: 9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-vapelabpassword123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-vapelab-media}
+      MINIO_PUBLIC_URL: http://localhost:9000/${MINIO_BUCKET:-vapelab-media}
+      STOREFRONT_URL: http://localhost:3000
+    volumes:
+      - backend_uploads:/app/public/uploads
+    networks:
+      - vapelab_net
+
+  # -------------------------------------------------------------------
+  # 6. فرانت‌اند و پنل مدیریت یکپارچه (Nuxt 3 Storefront & Admin)
+  # -------------------------------------------------------------------
+  frontend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: vapelab_storefront
+    container_name: vapelab_frontend
     restart: unless-stopped
+    depends_on:
+      - backend
     ports:
-      - "3010:3000" # 👈 پورت ویندوز رو کردیم ۳۰۱۰ تا با پروژه دیگه‌ات تداخل نکنه
-
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
-      DATABASE_URL: postgresql://vapelab:vapelabsecret123@postgres:5432/vapelab_db
-      PORT: 3000
       NODE_ENV: production
-    depends_on:
-      - postgres
-      - minio
+      PORT: 3000
+      HOST: 0.0.0.0
+      NUXT_PUBLIC_API_BASE: http://backend:4000
+      NUXT_PUBLIC_MINIO_URL: http://localhost:9000/${MINIO_BUCKET:-vapelab-media}
+    networks:
+      - vapelab_net
 
-  # -------------------------------------------------------------
-  # ۵. پنل مدیریت اختصاصی انگولار (Angular Admin Panel)
-  # -------------------------------------------------------------
-  admin:
-    build:
-      context: ./admin
-      dockerfile: Dockerfile
-    container_name: vapelab_admin
-    restart: unless-stopped
-    ports:
-      - "4200:80"
-    depends_on:
-      - storefront
-
-# تعریف ولوم‌ها برای همیشه در انتهای فایل
+# -------------------------------------------------------------------
+# حجم‌های دائمی و ماندگار (Persistent Volumes)
+# -------------------------------------------------------------------
 volumes:
   postgres_data:
-  portainer_data:
+    driver: local
+  redis_data:
+    driver: local
   minio_data:
+    driver: local
+  backend_uploads:
+    driver: local
+
+# -------------------------------------------------------------------
+# شبکه اختصاصی داخلی سرویس‌ها (Private Network)
+# -------------------------------------------------------------------
+networks:
+  vapelab_net:
+    driver: bridge

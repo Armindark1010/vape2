@@ -1,107 +1,72 @@
-# 🏛️ مستند معماری فنی ویپ‌لب (VAPELAB Architecture)
+# معماری یکپارچه سامانه ویپ‌لب (VAPELAB Architecture)
 
-## ۱. نمای کلی معماری (High-Level Architecture)
+این سند معماری نهایی، مرجع و تولیدی (Production-Ready) کل پلتفرم فروشگاهی ویپ‌لب را تشریح می‌کند.
 
-پروژه ویپ‌لب از یک معماری چندلایه و ماژولار بهره می‌برد که برای پاسخگویی به سرعت بالا در موبایل و مدیریت عملیاتی فروشگاه به ۳ بخش تفکیک شده است:
+---
+
+## ۱. نمای کلی سیستم (System Overview)
+
+پلتفرم ویپ‌لب از سه لایه اصلی تشکیل شده است:
 
 ```mermaid
-graph TD
-    ClientMobile["📱 خریدار موبایل / دسکتاپ"] -->|HTTP / SSR| NuxtStore["🛍️ فروشگاه Nuxt 3 (Port 3001)"]
-    AdminUser["💻 ادمین / اپراتور انبار"] -->|REST / SPA| AngularAdmin["⚙️ پنل ادمین Angular 18 (Port 4200)"]
-    
-    subgraph Storefront Layer
-        NuxtStore --> NuxtPages["Vue 3 Pages & Composables"]
-        NuxtStore --> NitroAPI["Nitro Server Routes (/server/api)"]
-        NitroAPI --> DrizzleORM["Drizzle ORM + Fallback Mock"]
-    end
+flowchart TD
+    Client["کلاینت / مرورگر کاربر (Desktop / Mobile Touch)"]
+    Nuxt["استورفرانت و پنل ادمین (Nuxt 3 / Vue 3) - پورت 3001"]
+    NestJS["بک‌اند مقتدر سامانه (NestJS) - پورت 4000"]
+    PostgreSQL[("پایگاه داده رابطه‌ای (PostgreSQL 16)")]
+    SMS["سرویس پیامک کاوه‌نگار (Kavenegar Gateway)"]
 
-    subgraph Admin Layer
-        AngularAdmin --> CoreServices["Angular Signals & RxJS Services"]
-        AngularAdmin -->|Proxy /api/admin| NitroAPI
-    end
-
-    subgraph Enterprise Backend Layer
-        NestAPI["🚀 NestJS API Service (Port 4000)"]
-        NestAPI --> PrismaORM["Prisma Client"]
-    end
-
-    DrizzleORM --> PostgreSQL[("🐘 پایگاه داده PostgreSQL")]
-    PrismaORM --> PostgreSQL
+    Client -->|درخواست‌های صفحات و کامپوننت‌ها| Nuxt
+    Nuxt -->|پروکسی شفاف API و کوکی‌های امن HttpOnly| NestJS
+    NestJS -->|دسترسی انحصاری از طریق Prisma ORM| PostgreSQL
+    NestJS -->|ارسال OTP و اطلاع‌رسانی موجودی انبار| SMS
 ```
 
 ---
 
-## ۲. لایه‌های سیستم به تفکیک
+## ۲. بک‌اند انحصاری و مقتدر (Authoritative Backend: NestJS)
 
-### ۲.۱. لایه فروشگاه (Storefront - Nuxt 3)
-- **محل:** `/app`, `/server`, `/public`
-- **فناوری:** Nuxt 3.16 + Vue 3 (Composition API) + Tailwind CSS v4 + Vite.
-- **رندرینگ:** رندر هیبریدی (SSR برای SEO صفحات محصولات و دسته‌بندی‌ها + SPA/CSR برای سبد خرید و حساب کاربری).
-- **مدیریت استیت (State Management):** 
-  - سینگلتون پترن با Vue Composables (`useAuth`, `useVape`, `useReservation`, `useRestockAlerts`).
-  - عدم استفاده از وابستگی‌های سنگین مانند Pinia در فرانت برای حفظ سبکی و زمان لود آنی در موبایل.
-  - همگام‌سازی خودکار استیت‌های بحرانی با `localStorage`.
-- **۳D و واقعیت افزوده:** اسکریپت رسمی `<model-viewer>` شرکت گوگل برای رندر سه‌بعدی سبک، سازگار با مرورگرهای موبایل سافاری و کروم.
-
-### ۲.۲. سرور داخلی Nitro (`/server`)
-- سرور بدون سرور (Serverless-ready) تعبیه‌شده درون Nuxt 3.
-- **مسیرهای API:**
-  - `/server/api/auth/*`: احراز هویت بدون OTP با پسورد و صدور سشن.
-  - `/server/api/products/*`: دریافت کاتالوگ محصولات، مشخصات، فیلتر و ره‌گیری موجودی.
-  - `/server/api/checkout.post.ts`: پردازش سبد خرید، محاسبه تخفیف و ایجاد سفارش.
-  - `/server/api/ai/chat.post.ts`: موتور استنتاجی مشاور انتخاب طعم و نیکوتین.
-  - `/server/api/admin/*`: اندپوینت‌های پردازش اطلاعات سفارشات، فاکتورها و آمار BI ویژه پنل ادمین.
-- **اتصال دیتابیس:** Drizzle ORM با درایور استاندارد `pg`.
-- **مکانیزم تاب‌آوری (Fallback Resilience):** در صورت عدم دسترسی به دیتابیس PostgreSQL یا آفلاین بودن سرور پایگاه‌داده، ماژول `fallbackData.ts` وارد مدار شده و فروشگاه بدون ارور ۵۰۰ با دیتاهای کاتالوگ محلی سرویس‌دهی می‌کند.
-
-### ۲.۳. پنل مدیریت (Admin Panel - Angular 18 Standalone)
-- **محل:** `/admin`
-- **فناوری:** Angular 18 (Standalone Components، بدون نیاز به NgModules)، TypeScript 5.4، SCSS.
-- **مدیریت حالت و جریان داده:**
-  - **Angular Signals:** برای متغیرهای استیت محلی، فرم‌ها و وضعیت‌های کامپوننت.
-  - **RxJS Streams:** برای مانیتورینگ جریان جستجو (`debounceTime`, `distinctUntilChanged`, `switchMap`) و اتصال به سرویس‌های دیتایی.
-- **معماری داخلی پنل:**
-  - `/admin/src/app/core`: اینترسپتورها (`auth.interceptor.ts`)، گاردها (`auth.guard.ts`)، مدل‌ها و سرویس‌های پایه.
-  - `/admin/src/app/features`: ماژول‌های فیچر مستقل (داشبورد هوش تجاری، سفارشات، کالاها، احراز هویت).
-  - `/admin/src/app/layout`: لایوت واکنش‌گرا با هماهنگی کامل موبایل (سایدبار پاپ‌آپ و نوار پایین صفحه).
-  - `/admin/src/app/shared`: چارت اختصاصی تحلیلی SVG و پایپ‌های فرمت قیمت تومان.
-
-### ۲.۴. بک‌اند سازمانی (NestJS API - `/backend`)
-- **محل:** `/backend`
-- **فناوری:** NestJS 11 + Prisma ORM 6 + Passport JWT + Swagger.
-- **هدف معماری:** جداسازی منطق‌های سازمانی، پردازش‌های ناهمگام نوتیفیکیشن‌ها و وب‌هوک‌های درگاه‌های بانکی در محیط میکرو‌سرویسی.
+- **فریم‌ورک:** NestJS نسخه ۱۰ با ساختار ماژولار و TypeScript.
+- **مسئولیت‌ها:**
+  - تنها نقطه انحصاری اجرای تمام قوانین تجاری، احراز هویت، انبارداری و تراکنش‌های مالی.
+  - هیچ لایه دیگری (از جمله Nitro) حق اتصال مستقیم به پایگاه داده یا اجرای منطق موازی تجاری را ندارد.
+- **ماژول‌های بک‌اند:**
+  1. `AuthModule`: ورود و ثبت‌نام فقط بر اساس نام کاربری/ایمیل و رمز عبور (بدون OTP اجباری لاگین)، هش‌کردن رمزها با `bcryptjs`، صدور کوکی امن HttpOnly به نام `vapelab_token` با محافظت کامل در برابر CSRF.
+  2. `ReservationsModule`: رزرو اتمیک ۱۰ دقیقه‌ای موجودی انبار مستقیماً در PostgreSQL با استفاده از ترنزکشن‌های پایگاه داده.
+  3. `OrdersModule`: ثبت سفارش منوط به احراز هویت مشتری، اعتبارسنجی رزرو فعال، اسنپ‌شات تغییرناپذیر نرخ کمیسیون، و کسر قطعی انبار فقط پس از تایید موفق پرداخت.
+  4. `ProductsModule`: کاتالوگ محصولات، فیلترها، جستجو و کنترل موجودی.
+  5. `CategoriesModule` و `BrandsModule`: دسته‌بندی‌ها و برندهای کالاها.
+  6. `BannersModule`: اسلایدر و بنرهای صفحه اصلی فروشگاه.
+  7. `SuppliersModule`: پرتال تأمین‌کنندگان با جداسازی کامل داده‌ها (Data Isolation) و به‌روزرسانی موجودی کالاهای تخصیص‌یافته.
+  8. `SettlementsModule`: موتور تسویه‌حساب هفتگی تأمین‌کنندگان، کسر اتوماتیک کمیسیون پلتفرم و ثبت اسناد دوبل حسابداری در `TransactionJournal`.
+  9. `AdminModule`: مدیریت عملیات ادمین، آمار داشبورد (KPI)، تغییر وضعیت سفارش‌ها و رهگیری پستی مرسولات.
+  10. `PaymentsModule`: مدیریت یکپارچه تراکنش‌های درگاه پرداخت، سرویس اختصاصی سندباکس زرین‌پال (`ZarinpalService`) با اتصال به REST v4، وریفای اتمیک، ثبت سوابق مالی و پشتیبانی از فال‌بک شبیه‌ساز پرداخت.
+  11. `StorefrontModule`: نشانی‌های ذخیره‌شده کاربران، اعتبارسنجی کدهای تخفیف، ثبت نظرات، خبرنامه و فرم تماس.
 
 ---
 
-## ۳. جریان داده سفارش و رزرو کالا (Order & Reservation Data Flow)
+## ۳. معماری پایگاه داده و اورام (Prisma ORM & PostgreSQL)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as کاربر موبایل
-    participant Store as رابط کاربری Nuxt
-    participant Nitro as سرور Nitro API
-    participant ResUtil as موتور رزرو (reservation.ts)
-    participant DB as پایگاه داده PostgreSQL
-
-    User->>Store: افزودن محصول به سبد خرید
-    Store->>Store: اعتبارسنجی موجودی کلاینت (useVape)
-    User->>Store: کلیک روی تکمیل سفارش / پرداخت
-    Store->>Nitro: POST /api/v1/cart/reserve
-    Nitro->>ResUtil: قفل کردن موجودی برای ۱۰ دقیقه
-    ResUtil-->>Store: تایید رزرو + کد توکن رزرو
-    Store->>User: فعال شدن تایمر معکوس ۱۰ دقیقه
-    User->>Store: ثبت اطلاعات آدرس و پرداخت
-    Store->>Nitro: POST /api/checkout
-    Nitro->>DB: درج سفارش در جدول orders و order_items
-    Nitro->>ResUtil: تثبیت کسر موجودی نهایی
-    Nitro-->>Store: شماره فاکتور رسمی
-    Store-->>User: نمایش صفحه تایید سفارش و جزئیات ارسال
-```
+- **دیتابیس:** PostgreSQL 16 انحصاری (`vape_lifestyle_db`).
+- **اورام:** Prisma ORM نسخه 6.19.3.
+- **حذف Drizzle:** ماژول Drizzle و فایل‌های موازی آن به طور کامل از چرخه عملیاتی حذف شده‌اند.
+- **یکپارچگی شناسه‌ها و مبالغ:** تمام شناسه‌ها به صورت `Int` و کلیه مبالغ مالی بدون اعشار بر حسب تومان ایران (`IRT`) ذخیره می‌شوند.
 
 ---
 
-## ۴. استراتژی استایل‌دهی و تم تاریک نئونی (Design System)
-- **پالت رنگی:** دارک نئونی لوکس (`#09090b` به عنوان پس‌زمینه اصلی، فسفری `#22c55e` برای المان‌های فراخوان اقدام CTA، فیروزه‌ای `#06b6d4` برای متالیک و بنفش `#8b5cf6` برای طعم‌های سالت).
-- **فونت فارسی:** استفاده از فونت استاندارد **وزیرمتن (Vazirmatn)** در تمام سطوح فرانت و ادمین برای خوانایی کامل روی صفحه‌نمایش‌های کوچک.
-- **Glassmorphism:** بهره‌گیری از `backdrop-filter: blur(12px)` برای شیت‌ها و هدر شناور.
+## ۴. استورفرانت و پنل مدیریت مقتدر (Nuxt Storefront & Nuxt Admin)
+
+- **چارچوب:** Nuxt 3 / Vue 3 / Vite.
+- **پنل مدیریت پیش‌فرض و انحصاری:** پنل ادمین مستقر در `app/pages/admin-panel` با چیدمان `app/layouts/admin.vue` پنل رسمی و انحصاری سامانه است.
+- **حذف پنل آنگولار:** پروژه قدیمی و زائد `/admin` که به صورت موازی با فریم‌ورک Angular وجود داشت به همراه وابستگی‌های مربوطه حذف شد.
+- **حذف کدهای Next.js:** دایرکتوری قدیمی و بلااستفاده `src/` و فایل `next.config.ts` به طور کامل پاکسازی شدند.
+- **پروکسی Nitro:** در `nuxt.config.ts`، تمام درخواست‌های `/api/**` به صورت شفاف به بک‌اند NestJS روی `http://127.0.0.1:4000/api/**` هدایت می‌شوند و کوکی‌های احراز هویت حفظ می‌گردند.
+
+---
+
+## ۵. امنیت و کنترل دسترسی بر پایه نقش (RBAC)
+
+سه نقش سیستمی اصلی پیاده‌سازی شده‌اند:
+1. `CUSTOMER`: ثبت سفارش پس از ورود، مدیریت نشانی‌ها، مشاهده تاریخچه خرید.
+2. `ADMIN`: مدیریت کل محصولات، بنرها، آمار مالی، تایید واریزهای تسویه، تغییر وضعیت سفارش‌ها.
+3. `SUPPLIER`: دسترسی اختصاصی به پرتال تأمین‌کننده (`/supplier`)، مشاهده فروش اقلام خود، به‌روزرسانی موجودی انبار کالاهای تحت مالکیت، و مشاهده صورت‌حساب‌های تسویه هفتگی.

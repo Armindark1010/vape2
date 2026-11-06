@@ -6,7 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
-  ParseUUIDPipe,
+  ParseIntPipe,
   Post,
   Req,
   UseGuards,
@@ -46,19 +46,18 @@ export class NotificationsController {
   })
   @ApiParam({
     name: 'id',
-    description: 'شناسه محصول (UUID)',
-    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'شناسه محصول (Integer)',
+    example: 1,
   })
   @ApiResponse({
     status: 200,
     description: 'درخواست اطلاع‌رسانی با موفقیت ثبت شد',
   })
   async subscribeRestock(
-    @Param('id', ParseUUIDPipe) productId: string,
+    @Param('id', ParseIntPipe) productId: number,
     @Body() dto: SubscribeRestockDto,
     @Req() req: any,
   ) {
-    // استخراج اختیاری کاربر از توکن در صورت وجود
     const user = req.user as User | undefined;
     return this.notificationsService.subscribe(
       productId,
@@ -89,7 +88,7 @@ export class NotificationsController {
   @ApiOperation({ summary: 'لغو یک درخواست اطلاع‌رسانی موجودی' })
   async cancelAlert(
     @CurrentUser() user: User,
-    @Param('id', ParseUUIDPipe) alertId: string,
+    @Param('id', ParseIntPipe) alertId: number,
   ) {
     return this.notificationsService.cancelAlert(alertId, user.id);
   }
@@ -105,7 +104,7 @@ export class NotificationsController {
     summary: 'استعلام آمار کاربران منتظر اطلاع‌رسانی برای یک محصول (Admin only)',
   })
   async getRestockStats(
-    @Param('productId', ParseUUIDPipe) productId: string,
+    @Param('productId', ParseIntPipe) productId: number,
   ) {
     return this.notificationsService.getRestockStats(productId);
   }
@@ -121,7 +120,7 @@ export class NotificationsController {
     summary: 'ارسال دستی و گروهی پیامک کاوه‌نگار برای تمامی کاربران منتظر این کالا (Admin only)',
   })
   async sendRestockSms(
-    @Param('productId', ParseUUIDPipe) productId: string,
+    @Param('productId', ParseIntPipe) productId: number,
     @Body() dto: SendRestockSmsDto,
   ) {
     return this.notificationsService.sendRestockSmsManual(

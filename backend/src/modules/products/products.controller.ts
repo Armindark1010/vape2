@@ -3,96 +3,100 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
-import { Role } from '@prisma/client';
-import { ProductsService } from './products.service';
-import { CreateProductDto } from './dto/create-product.dto';
-import { UpdateProductDto } from './dto/update-product.dto';
-import { ProductQueryDto } from './dto/product-query.dto';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Role, User } from '@prisma/client';
+import { ProductsService, ProductFilterQuery } from './products.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
-@ApiTags('Products')
-@Controller('products')
+@ApiTags('Products & Variants')
+@Controller(['api/v1/products', 'api/products', 'products'])
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  @ApiOperation({
-    summary: 'Get paginated products list with advanced filters',
-    description:
-      'Filter by category, brand, type, flavor, nicotine strength, price range, stock, search query, and sorting.',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Paginated products list and metadata returned successfully',
-  })
-  async findAll(@Query() query: ProductQueryDto) {
+  @ApiOperation({ summary: 'Get products with filtering, search, and pagination' })
+  async findAll(@Query() query: ProductFilterQuery) {
     return this.productsService.findAll(query);
   }
 
-  @Get('filters')
-  @ApiOperation({ summary: 'Get all available filter options (brands, flavors, nicotine options)' })
-  @ApiResponse({ status: 200, description: 'Available filter values returned successfully' })
-  async getFilters() {
-    return this.productsService.getFilters();
-  }
-
-  @Get(':slug')
-  @ApiOperation({ summary: 'Get single product details and related products by slug' })
-  @ApiResponse({ status: 200, description: 'Product details found' })
-  @ApiResponse({ status: 404, description: 'Product not found' })
-  async findBySlug(@Param('slug') slug: string) {
-    return this.productsService.findBySlug(slug);
+  @Get(':slugOrId')
+  @ApiOperation({ summary: 'Get single product by ID or Slug' })
+  async findOne(@Param('slugOrId') slugOrId: string) {
+    return this.productsService.findBySlugOrId(slugOrId);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create new vape product (Admin only)' })
-  @ApiResponse({ status: 201, description: 'Product created successfully' })
-  @ApiResponse({ status: 400, description: 'Product slug already exists or validation error' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden (Admin role required)' })
-  async create(@Body() dto: CreateProductDto) {
-    return this.productsService.create(dto);
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Admin create product with variants and dynamic attributes' })
+  async create(@Body() body: any) {
+    return this.productsService.create(body);
   }
 
-  @Patch(':id')
+  @Put(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Update product by ID (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Product updated successfully' })
-  @ApiResponse({ status: 404, description: 'Product not found' })
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateProductDto,
+  @ApiOperation({ summary: 'Admin update product with variants' })
+  async update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
+    return this.productsService.update(id, body);
+  }
+
+  @Post('variants/:variantId/stock-adjust')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.SUPPLIER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Adjust stock for a specific variant with movement log' })
+  async adjustVariantStock(
+    @Param('variantId', ParseIntPipe) variantId: number,
+    @Body('delta') delta: number,
+    @Body('reason') reason: string,
+    @CurrentUser() user?: User,
   ) {
-    return this.productsService.update(id, dto);
+    return this.productsService.adjustVariantStock(
+      variantId,
+      Number(delta) || 0,
+      reason,
+      user?.id,
+    );
+  }
+
+  @Get(':id/inventory-movements')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.SUPPLIER)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get inventory movement history for product' })
+  async getInventoryMovements(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('variantId') variantId?: string,
+  ) {
+    return this.productsService.getInventoryMovements(
+      id,
+      variantId ? Number(variantId) : undefined,
+    );
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Delete product by ID (Admin only)' })
-  @ApiResponse({ status: 200, description: 'Product deleted successfully' })
-  @ApiResponse({ status: 404, description: 'Product not found' })
-  async remove(@Param('id') id: string) {
-    return this.productsService.remove(id);
+  @ApiOperation({ summary: 'Admin delete product' })
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    return this.productsService.delete(id);
   }
 }

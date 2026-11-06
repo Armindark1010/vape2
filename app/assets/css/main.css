@@ -15,6 +15,19 @@
   --color-ice: #7dd3fc;
   --color-blush: #f0abfc;
   --color-gold: #facc15;
+
+  /* Nuxt Dashboard Template & VAPELAB Unified Design Tokens */
+  --color-dash-purple: #8B5CF6;
+  --color-dash-purple-deep: #6D28D9;
+  --color-dash-blue: #3B82F6;
+  --color-dash-blue-deep: #1D4ED8;
+  --color-dash-bg: #09090F;
+  --color-dash-sidebar: #0D0D16;
+  --color-dash-card: #13131F;
+  --color-dash-surface: #1A1A29;
+  --color-dash-border: #29293B;
+  --color-dash-text: #F4F4F8;
+  --color-dash-muted: #9696AD;
 }
 
 html {

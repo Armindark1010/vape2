@@ -1,3 +1,5 @@
+const backendUrl = (process.env.BACKEND_URL || process.env.NUXT_PUBLIC_API_BASE || 'http://127.0.0.1:4000').replace(/\/+$/, '');
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
@@ -9,6 +11,22 @@ export default defineNuxtConfig({
     host: '0.0.0.0',
   },
 
+  routeRules: {
+    '/api/**': { proxy: `${backendUrl}/api/**` },
+  },
+
+  nitro: {
+    routeRules: {
+      '/api/**': { proxy: `${backendUrl}/api/**` },
+    },
+  },
+
+  runtimeConfig: {
+    public: {
+      apiBase: process.env.NUXT_PUBLIC_API_BASE || '',
+      minioUrl: process.env.NUXT_PUBLIC_MINIO_URL || 'http://localhost:9000/vapelab-media',
+    },
+  },
 
   future: {
     compatibilityVersion: 4,

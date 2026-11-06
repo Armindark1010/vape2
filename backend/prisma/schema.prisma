@@ -9,23 +9,53 @@ generator client {
 
 enum Role {
   CUSTOMER
-  OPERATOR
   ADMIN
+  SUPPLIER
 }
 
-enum OrderStatus {
-  PENDING
-  PROCESSING
-  SHIPPED
-  DELIVERED
+enum order_status {
+  pending
+  paid
+  processing
+  shipped
+  delivered
+  cancelled
+  refunded
+}
+
+enum ReservationStatus {
+  ACTIVE
+  COMMITTED
+  EXPIRED
+  RELEASED
+}
+
+enum PaymentStatus {
+  INITIATED
+  SUCCESSFUL
+  FAILED
   CANCELLED
+  REFUNDED
 }
 
-enum ProductType {
-  JUICE
-  SALT_NIC
-  DEVICE_POD
-  ACCESSORY
+enum AccountType {
+  ASSET_GATEWAY
+  REVENUE_COMMISSION
+  LIABILITY_SUPPLIER
+  LIABILITY_CUSTOMER_REFUND
+  EXPENSE_PLATFORM
+}
+
+enum EntryType {
+  DEBIT
+  CREDIT
+}
+
+enum SettlementStatus {
+  PENDING_REVIEW
+  APPROVED
+  PAID
+  REJECTED
 }
 
 enum AlertStatus {
@@ -35,149 +65,501 @@ enum AlertStatus {
 }
 
 model User {
-  id           String         @id @default(uuid()) @db.Uuid
-  phoneNumber  String?        @unique
-  username     String?        @unique
-  passwordHash String?
-  fullName     String?
-  role         Role           @default(CUSTOMER)
-  isVerified   Boolean        @default(false)
-  otpCodes     OtpCode[]
-  cart         Cart?
+  id           Int                    @id @default(autoincrement())
+  name         String
+  email        String                 @unique
+  phone        String?
+  username     String?                @unique
+  passwordHash String?                @map("password_hash")
+  role         Role                   @default(CUSTOMER)
+  isAdmin      Boolean                @default(false) @map("is_admin")
+  createdAt    DateTime               @default(now()) @map("created_at")
   orders       Order[]
+  addresses    Address[]
+  reservations InventoryReservation[]
+  supplier     Supplier?
   alerts       ProductAlert[]
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  wishlists    Wishlist[]
 
   @@map("users")
 }
 
-model OtpCode {
-  id          String   @id @default(uuid()) @db.Uuid
-  phoneNumber String
-  code        String
-  expiresAt   DateTime
-  isUsed      Boolean  @default(false)
-  userId      String?  @db.Uuid
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
+model Brand {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  products    Product[]
 
-  @@index([phoneNumber, code])
-  @@map("otp_codes")
+  @@map("brands")
 }
 
 model Category {
-  id          String    @id @default(uuid()) @db.Uuid
+  id          Int       @id @default(autoincrement())
   name        String    @unique
   slug        String    @unique
   description String?
   image       String?
+  featured    Boolean   @default(true)
   products    Product[]
-  createdAt   DateTime  @default(now())
 
   @@map("categories")
 }
 
+model Supplier {
+  id             Int                  @id @default(autoincrement())
+  userId         Int                  @unique @map("user_id")
+  user           User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyName    String               @map("company_name")
+  contactName    String?              @map("contact_name")
+  phone          String?
+  email          String?
+  iban           String?
+  isActive       Boolean              @default(true) @map("is_active")
+  commissionRate Int?                 @map("commission_rate")
+  products       Product[]
+  settlements    SupplierSettlement[]
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @default(now()) @updatedAt @map("updated_at")
+
+  @@map("suppliers")
+}
+
 model Product {
-  id               String       @id @default(uuid()) @db.Uuid
-  title            String
-  slug             String       @unique
-  description      String?      @db.Text
-  price            Decimal      @db.Decimal(12, 2)
-  discountPrice    Decimal?     @db.Decimal(12, 2)
-  stock            Int          @default(0)
-  type             ProductType
-  brand            String
-  brandSlug        String?
-  images           String[]     @default([])
-  featured         Boolean      @default(false)
-  rating           Decimal?     @default(5.0) @db.Decimal(3, 2)
-  reviewCount      Int          @default(0)
-  
-  // Specialized Vape Attributes
-  nicotineStrength String?      // e.g. "20mg", "50mg", "3mg", "6mg"
-  flavorProfile    String[]     // e.g. ["Mango", "Ice", "Mint"]
-  volume           String?      // e.g. "30ml", "60ml", "10000 Puffs"
+  id                 Int                     @id @default(autoincrement())
+  slug               String                  @unique
+  name               String
+  sku                String?                 @unique
+  tagline            String?
+  shortDescription   String?                 @map("short_description")
+  description        String
+  seoTitle           String?                 @map("seo_title")
+  seoDescription     String?                 @map("seo_description")
+  specs              Json?
+  price              Int
+  discountPrice      Int?                    @map("discount_price")
+  compareAtPrice     Int?                    @map("compare_at_price")
+  rating             Int                     @default(0)
+  reviewCount        Int                     @default(0) @map("review_count")
+  stock              Int                     @default(0)
+  brandId            Int?                    @map("brand_id")
+  brand              Brand?                  @relation(fields: [brandId], references: [id])
+  categoryId         Int?                    @map("category_id")
+  category           Category?               @relation(fields: [categoryId], references: [id])
+  productTypeId      Int?                    @map("product_type_id")
+  productType        ProductType?            @relation(fields: [productTypeId], references: [id])
+  supplierId         Int?                    @map("supplier_id")
+  supplier           Supplier?               @relation(fields: [supplierId], references: [id])
+  images             Json?
+  featured           Boolean                 @default(false)
+  newArrival         Boolean                 @default(false) @map("new_arrival")
+  bestSeller         Boolean                 @default(false) @map("best_seller")
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @default(now()) @updatedAt @map("updated_at")
+  variants           ProductVariant[]
+  attributeValues    ProductAttributeValue[]
+  inventoryMovements InventoryMovement[]
+  orderItems         OrderItem[]
+  reservationItems   ReservationItem[]
+  alerts             ProductAlert[]
+  reviews            Review[]
+  wishlists          Wishlist[]
 
-  categoryId       String         @db.Uuid
-  category         Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  orderItems       OrderItem[]
-  cartItems        CartItem[]
-  alerts           ProductAlert[]
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-
-  @@index([type])
-  @@index([brand])
   @@map("products")
 }
 
+model InventoryReservation {
+  id        Int               @id @default(autoincrement())
+  userId    Int?              @map("user_id")
+  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String            @unique
+  status    ReservationStatus @default(ACTIVE)
+  expiresAt DateTime          @map("expires_at")
+  createdAt DateTime          @default(now()) @map("created_at")
+  items     ReservationItem[]
+  order     Order?
+
+  @@index([status, expiresAt])
+  @@map("inventory_reservations")
+}
+
+model ReservationItem {
+  id            Int                  @id @default(autoincrement())
+  reservationId Int                  @map("reservation_id")
+  reservation   InventoryReservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  productId     Int                  @map("product_id")
+  product       Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  variantId     Int?                 @map("variant_id")
+  variant       ProductVariant?      @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  quantity      Int
+
+  @@index([reservationId, productId])
+  @@index([reservationId, variantId])
+  @@map("reservation_items")
+}
+
+model Order {
+  id                       Int                  @id @default(autoincrement())
+  number                   String               @unique
+  userId                   Int?                 @map("user_id")
+  user                     User?                @relation(fields: [userId], references: [id], onDelete: Restrict)
+  reservationId            Int?                 @unique @map("reservation_id")
+  reservation              InventoryReservation? @relation(fields: [reservationId], references: [id])
+  name                     String
+  email                    String
+  phone                    String?
+  shipping                 Json?
+  couponCode               String?              @map("coupon_code")
+  subtotal                 Int
+  discount                 Int                  @default(0)
+  shippingFee              Int                  @default(0) @map("shipping_fee")
+  total                    Int
+  currency                 String               @default("IRT")
+  status                   order_status         @default(pending)
+  trackingCode             String?              @map("tracking_code")
+  courier                  String?
+  platformCommissionRate   Int                  @default(10) @map("platform_commission_rate")
+  platformCommissionAmount Int                  @default(0) @map("platform_commission_amount")
+  supplierPayableAmount    Int                  @default(0) @map("supplier_payable_amount")
+  isSettled                Boolean              @default(false) @map("is_settled")
+  createdAt                DateTime             @default(now()) @map("created_at")
+  items                    OrderItem[]
+  transactions             PaymentTransaction[]
+  journalEntries           TransactionJournal[]
+  settlementItem           SettlementItem?
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int             @id @default(autoincrement())
+  orderId   Int             @map("order_id")
+  order     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int?            @map("product_id")
+  product   Product?        @relation(fields: [productId], references: [id])
+  variantId Int?            @map("variant_id")
+  variant   ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+  name      String
+  image     String?
+  price     Int
+  qty       Int
+  flavor    String?
+  nicotine  String?
+
+  @@index([orderId])
+  @@index([variantId])
+  @@map("order_items")
+}
+
+model PaymentTransaction {
+  id               Int           @id @default(autoincrement())
+  orderId          Int           @map("order_id")
+  order            Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  idempotencyKey   String        @unique @map("idempotency_key")
+  gatewayProvider  String        @default("MANUAL_OR_PENDING") @map("gateway_provider")
+  gatewayReference String?       @map("gateway_reference")
+  amount           Int
+  currency         String        @default("IRT")
+  status           PaymentStatus @default(INITIATED)
+  metadata         Json?
+  verifiedAt       DateTime?     @map("verified_at")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  updatedAt        DateTime      @default(now()) @updatedAt @map("updated_at")
+
+  @@map("payment_transactions")
+}
+
+model TransactionJournal {
+  id          Int         @id @default(autoincrement())
+  orderId     Int?        @map("order_id")
+  order       Order?      @relation(fields: [orderId], references: [id])
+  accountType AccountType @map("account_type")
+  entryType   EntryType   @map("entry_type")
+  amount      Int
+  currency    String      @default("IRT")
+  description String
+  recordedAt  DateTime    @default(now()) @map("recorded_at")
+
+  @@index([orderId])
+  @@index([accountType, recordedAt])
+  @@map("transaction_journals")
+}
+
+model SupplierSettlement {
+  id                      Int              @id @default(autoincrement())
+  supplierId              Int              @map("supplier_id")
+  supplier                Supplier         @relation(fields: [supplierId], references: [id])
+  batchNumber             String           @unique @map("batch_number")
+  periodStart             DateTime         @map("period_start")
+  periodEnd               DateTime         @map("period_end")
+  totalSalesAmount        Int              @map("total_sales_amount")
+  totalCommissionDeducted Int              @map("total_commission_deducted")
+  netPayableAmount        Int              @map("net_payable_amount")
+  currency                String           @default("IRT")
+  status                  SettlementStatus @default(PENDING_REVIEW)
+  approvedByAdminId       Int?             @map("approved_by_admin_id")
+  settledAt               DateTime?        @map("settled_at")
+  payoutReference         String?          @map("payout_reference")
+  items                   SettlementItem[]
+  createdAt               DateTime         @default(now()) @map("created_at")
+
+  @@map("supplier_settlements")
+}
+
+model SettlementItem {
+  id                 Int                @id @default(autoincrement())
+  settlementId       Int                @map("settlement_id")
+  settlement         SupplierSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+  orderId            Int                @unique @map("order_id")
+  order              Order              @relation(fields: [orderId], references: [id])
+  orderGrossAmount   Int                @map("order_gross_amount")
+  commissionDeducted Int                @map("commission_deducted")
+  supplierPayable    Int                @map("supplier_payable")
+
+  @@map("settlement_items")
+}
+
+model GlobalSetting {
+  id          Int      @id @default(autoincrement())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("global_settings")
+}
+
+model Banner {
+  id           Int      @id @default(autoincrement())
+  title        String
+  subtitle     String?
+  imageUrl     String   @map("image_url")
+  linkUrl      String?  @map("link_url")
+  badge        String?
+  isActive     Boolean  @default(true) @map("is_active")
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("banners")
+}
+
+model Address {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String   @default("Home")
+  line1     String
+  line2     String?
+  city      String
+  zip       String
+  country   String   @default("Iran")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("addresses")
+}
+
+model Coupon {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique
+  description String
+  percent     Int?
+  fixed       Int?
+  minSubtotal Int       @default(0) @map("min_subtotal")
+  active      Boolean   @default(true)
+  validUntil  DateTime? @map("valid_until")
+
+  @@map("coupons")
+}
+
 model ProductAlert {
-  id          String      @id @default(uuid()) @db.Uuid
-  productId   String      @db.Uuid
+  id          Int         @id @default(autoincrement())
+  productId   Int         @map("product_id")
   product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  userId      String?     @db.Uuid
+  userId      Int?        @map("user_id")
   user        User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  phoneNumber String
+  phoneNumber String      @map("phone_number")
   status      AlertStatus @default(PENDING)
-  createdAt   DateTime    @default(now())
-  notifiedAt  DateTime?
+  createdAt   DateTime    @default(now()) @map("created_at")
+  notifiedAt  DateTime?   @map("notified_at")
 
   @@index([productId, status])
   @@index([phoneNumber])
   @@map("product_alerts")
 }
 
-model Cart {
-  id        String     @id @default(uuid()) @db.Uuid
-  userId    String     @unique @db.Uuid
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  items     CartItem[]
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
-
-  @@map("carts")
-}
-
-model CartItem {
-  id        String   @id @default(uuid()) @db.Uuid
-  cartId    String   @db.Uuid
-  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  productId String   @db.Uuid
+model Review {
+  id        Int      @id @default(autoincrement())
+  productId Int      @map("product_id")
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int      @default(1)
-  flavor    String?
-  nicotine  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  author    String
+  rating    Int
+  title     String?
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@unique([cartId, productId])
-  @@map("cart_items")
+  @@map("reviews")
 }
 
-model Order {
-  id          String      @id @default(uuid()) @db.Uuid
-  orderNumber String      @unique
-  userId      String      @db.Uuid
-  user        User        @relation(fields: [userId], references: [id], onDelete: Restrict)
-  totalAmount Decimal     @db.Decimal(12, 2)
-  status      OrderStatus @default(PENDING)
-  items       OrderItem[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+model Wishlist {
+  id        Int      @id @default(autoincrement())
+  userId    Int?     @map("user_id")
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int      @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@map("orders")
+  @@map("wishlist")
 }
 
-model OrderItem {
-  id        String   @id @default(uuid()) @db.Uuid
-  orderId   String   @db.Uuid
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String   @db.Uuid
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
-  quantity  Int
-  unitPrice Decimal  @db.Decimal(12, 2)
-  subtotal  Decimal  @db.Decimal(12, 2)
+model Subscriber {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
 
-  @@map("order_items")
+  @@map("subscribers")
 }
+
+model ContactMessage {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("contact_messages")
+}
+
+model MediaFile {
+  id           Int      @id @default(autoincrement())
+  filename     String   @unique
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  size         Int
+  url          String
+  bucket       String   @default("vapelab-media")
+  key          String
+  width        Int?
+  height       Int?
+  altText      String?  @map("alt_text")
+  uploadedBy   Int?     @map("uploaded_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("media_files")
+}
+
+model ProductType {
+  id          Int                @id @default(autoincrement())
+  name        String             // e.g. "پاد یک‌بارمصرف"
+  slug        String             @unique // e.g. "disposable-vape"
+  description String?
+  icon        String?
+  attributes  ProductAttribute[]
+  products    Product[]
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @default(now()) @updatedAt @map("updated_at")
+
+  @@map("product_types")
+}
+
+model ProductAttribute {
+  id            Int                     @id @default(autoincrement())
+  productTypeId Int                     @map("product_type_id")
+  productType   ProductType             @relation(fields: [productTypeId], references: [id], onDelete: Cascade)
+  name          String                  // e.g. "میزان نیکوتین"
+  code          String                  // e.g. "nicotine"
+  type          String                  @default("select") // "text", "number", "select", "multiselect", "boolean", "color"
+  isRequired    Boolean                 @default(false) @map("is_required")
+  isVariant     Boolean                 @default(false) @map("is_variant") // Used in generating matrix
+  isVisible     Boolean                 @default(true) @map("is_visible")
+  displayOrder  Int                     @default(0) @map("display_order")
+  options       Json?                   // e.g. ["20mg", "35mg", "50mg"] or [{ label: "Blueberry", value: "blueberry", color: "#3b82f6" }]
+  unit          String?                 // e.g. "mg", "ml", "پاف"
+  productValues ProductAttributeValue[]
+  variantValues VariantAttributeValue[]
+
+  @@unique([productTypeId, code])
+  @@map("product_attributes")
+}
+
+model ProductAttributeValue {
+  id          Int              @id @default(autoincrement())
+  productId   Int              @map("product_id")
+  product     Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  attributeId Int              @map("attribute_id")
+  attribute   ProductAttribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  value       String           // Value representation
+  
+  @@unique([productId, attributeId])
+  @@map("product_attribute_values")
+}
+
+model ProductVariant {
+  id               Int                     @id @default(autoincrement())
+  productId        Int                     @map("product_id")
+  product          Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku              String                  @unique
+  title            String                  // e.g. "بلوبری / ۵۰ میلی‌گرم"
+  combinationHash  String                  @map("combination_hash") // Canonical sorted key: e.g. "flavor:blueberry|nicotine:50mg"
+  combination      Json                    // JSON representation: { flavor: "Blueberry", nicotine: "50mg" }
+  price            Int
+  compareAtPrice   Int?                    @map("compare_at_price")
+  stock            Int                     @default(0)
+  reservedQuantity Int                     @default(0) @map("reserved_quantity")
+  weight           Int?                    // in grams
+  image            String?
+  isActive         Boolean                 @default(true) @map("is_active")
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @default(now()) @updatedAt @map("updated_at")
+
+  attributeValues  VariantAttributeValue[]
+  movements        InventoryMovement[]
+  reservationItems ReservationItem[]
+  orderItems       OrderItem[]
+
+  @@unique([productId, combinationHash])
+  @@index([productId, isActive])
+  @@map("product_variants")
+}
+
+model VariantAttributeValue {
+  id          Int              @id @default(autoincrement())
+  variantId   Int              @map("variant_id")
+  variant     ProductVariant   @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  attributeId Int              @map("attribute_id")
+  attribute   ProductAttribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  value       String           // Normalized attribute value
+
+  @@unique([variantId, attributeId])
+  @@map("variant_attribute_values")
+}
+
+enum InventoryMovementType {
+  PURCHASE_RECEIPT
+  SALE_DEDUCTION
+  ORDER_RESERVED
+  RESERVATION_RELEASED
+  MANUAL_ADJUSTMENT
+  RETURN_RESTOCK
+}
+
+model InventoryMovement {
+  id          Int                   @id @default(autoincrement())
+  variantId   Int                   @map("variant_id")
+  variant     ProductVariant        @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  productId   Int                   @map("product_id")
+  product     Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type        InventoryMovementType
+  delta       Int                   // e.g. +10, -2
+  stockBefore Int                   @map("stock_before")
+  stockAfter  Int                   @map("stock_after")
+  reason      String?
+  orderId     Int?                  @map("order_id")
+  userId      Int?                  @map("user_id")
+  createdAt   DateTime              @default(now()) @map("created_at")
+
+  @@index([variantId, createdAt])
+  @@index([productId, createdAt])
+  @@map("inventory_movements")
+}
+

@@ -17,200 +17,80 @@ export class NotificationsService {
     private readonly kavenegar: KavenegarService,
   ) {}
 
-  /**
-   * ثبت اشتراک «موجود شد خبرم کن» برای کاربر مهمان یا کاربر لاگین‌شده
-   */
   async subscribe(
-    productId: string,
+    productId: number | string,
     phoneNumber?: string,
-    userId?: string,
+    userId?: number,
   ) {
-    // ۱. بررسی وجود کالا
+    const pid = Number(productId);
     const product = await this.prisma.product.findUnique({
-      where: { id: productId },
+      where: { id: pid },
     });
 
     if (!product) {
       throw new NotFoundException('محصول مورد نظر یافت نشد');
     }
 
-    // ۲. حل شماره موبایل (از کاربر یا پارامتر ورودی)
     let finalPhone = phoneNumber?.trim();
     if (!finalPhone && userId) {
       const user = await this.prisma.user.findUnique({ where: { id: userId } });
-      finalPhone = user?.phoneNumber || undefined;
+      finalPhone = user?.phone || undefined;
     }
 
     if (!finalPhone) {
       throw new BadRequestException('ارائه شماره موبایل جهت اطلاع‌رسانی الزامی است');
     }
 
-    // نرمال‌سازی شماره همراه ایران
     if (finalPhone.startsWith('+98')) {
       finalPhone = '0' + finalPhone.slice(3);
     } else if (finalPhone.startsWith('0098')) {
       finalPhone = '0' + finalPhone.slice(4);
     }
 
-    // ۳. بررسی عدم ثبت تکراری درخواست در وضعیت PENDING
-    const existing = await this.prisma.productAlert.findFirst({
+    const existingAlert = await this.prisma.productAlert.findFirst({
       where: {
-        productId,
+        productId: pid,
         phoneNumber: finalPhone,
         status: AlertStatus.PENDING,
       },
     });
 
-    if (existing) {
+    if (existingAlert) {
       return {
         success: true,
+        message: 'درخواست اطلاع‌رسانی شما از قبل برای این محصول ثبت شده است',
         alreadySubscribed: true,
-        message: 'درخواست اطلاع‌رسانی شما قبلاً برای این کالا ثبت شده است',
-        alert: existing,
       };
     }
 
-    // ۴. ایجاد رکورد اطلاع‌رسانی
-    const alert = await this.prisma.productAlert.create({
+    await this.prisma.productAlert.create({
       data: {
-        productId,
+        productId: pid,
+        userId: userId ? Number(userId) : null,
         phoneNumber: finalPhone,
-        userId: userId || null,
         status: AlertStatus.PENDING,
       },
     });
 
-    this.logger.log(
-      `[Restock Subscription] Phone ${finalPhone} subscribed to product ${product.title} (${productId})`,
-    );
-
     return {
       success: true,
+      message: `درخواست اطلاع‌رسانی با موفقیت ثبت شد. به محض موجود شدن ${product.name}، پیامک دریافت خواهید کرد.`,
       alreadySubscribed: false,
-      message: 'درخواست با موفقیت ثبت شد. به محض موجود شدن کالا به شما اطلاع داده خواهد شد.',
-      alert,
     };
   }
 
-  /**
-   * استعلام آمار کاربران منتظر کالا برای نمایش در پنل ادمین
-   */
-  async getRestockStats(productId: string) {
-    const product = await this.prisma.product.findUnique({
-      where: { id: productId },
-      select: { id: true, title: true, stock: true },
-    });
-
-    if (!product) {
-      throw new NotFoundException('محصول مورد نظر یافت نشد');
-    }
-
-    const [pendingCount, notifiedCount] = await Promise.all([
-      this.prisma.productAlert.count({
-        where: { productId, status: AlertStatus.PENDING },
-      }),
-      this.prisma.productAlert.count({
-        where: { productId, status: AlertStatus.NOTIFIED },
-      }),
-    ]);
-
-    return {
-      productId,
-      productTitle: product.title,
-      stock: product.stock,
-      pendingCount,
-      notifiedCount,
-    };
-  }
-
-  /**
-   * متد دستی ارسال پیامک اطلاع‌رسانی توسط ادمین از طریق پنل
-   */
-  async sendRestockSmsManual(productId: string, customMessage?: string) {
-    const product = await this.prisma.product.findUnique({
-      where: { id: productId },
-    });
-
-    if (!product) {
-      throw new NotFoundException('محصول مورد نظر یافت نشد');
-    }
-
-    // استخراج تمامی درخواست‌های منتظر پیامک
-    const pendingAlerts = await this.prisma.productAlert.findMany({
-      where: {
-        productId,
-        status: AlertStatus.PENDING,
-      },
-    });
-
-    if (pendingAlerts.length === 0) {
-      return {
-        success: true,
-        sentCount: 0,
-        message: 'هیچ کاربر منتظری برای این محصول در وضعیت آماده‌باش وجود ندارد',
-      };
-    }
-
-    const defaultMsg = `ویپ‌لب: کالای «${product.title}» که منتظرش بودید در انبار موجود شد!\nخرید سریع:\nvapelab.ir/product/${product.slug}`;
-    const messageToSend = customMessage?.trim() || defaultMsg;
-
-    let successfulSends = 0;
-    const alertIdsToUpdate: string[] = [];
-
-    // ارسال پیامک گروهی به کاربران
-    for (const alert of pendingAlerts) {
-      try {
-        const res = await this.kavenegar.sendTextSms(alert.phoneNumber, messageToSend);
-        if (res.success) {
-          successfulSends++;
-          alertIdsToUpdate.push(alert.id);
-        }
-      } catch (err: any) {
-        this.logger.error(
-          `Failed sending restock SMS to ${alert.phoneNumber}: ${err.message}`,
-        );
-      }
-    }
-
-    // بروزرسانی وضعیت درخواست‌ها به NOTIFIED
-    if (alertIdsToUpdate.length > 0) {
-      await this.prisma.productAlert.updateMany({
-        where: { id: { in: alertIdsToUpdate } },
-        data: {
-          status: AlertStatus.NOTIFIED,
-          notifiedAt: new Date(),
-        },
-      });
-    }
-
-    this.logger.log(
-      `[Restock SMS Batch] Dispatched ${successfulSends}/${pendingAlerts.length} SMS for product "${product.title}"`,
-    );
-
-    return {
-      success: true,
-      sentCount: successfulSends,
-      totalPending: pendingAlerts.length,
-      message: `پیامک اطلاع‌رسانی با موفقیت برای ${successfulSends} کاربر ارسال شد.`,
-    };
-  }
-
-  /**
-   * دریافت لیست اشتراک‌های کاربر لاگین‌شده
-   */
-  async getMyAlerts(userId: string) {
+  async getMyAlerts(userId: number) {
     return this.prisma.productAlert.findMany({
-      where: { userId },
+      where: { userId: Number(userId) },
       include: {
         product: {
           select: {
             id: true,
-            title: true,
+            name: true,
             slug: true,
-            images: true,
             price: true,
-            discountPrice: true,
             stock: true,
+            images: true,
           },
         },
       },
@@ -218,21 +98,78 @@ export class NotificationsService {
     });
   }
 
-  /**
-   * لغو درخواست اطلاع‌رسانی
-   */
-  async cancelAlert(alertId: string, userId?: string) {
-    const where: any = { id: alertId };
-    if (userId) where.userId = userId;
+  async cancelAlert(alertId: number, userId: number) {
+    const alert = await this.prisma.productAlert.findFirst({
+      where: { id: Number(alertId), userId: Number(userId) },
+    });
 
-    const alert = await this.prisma.productAlert.findFirst({ where });
     if (!alert) {
-      throw new NotFoundException('اشتراک مورد نظر یافت نشد');
+      throw new NotFoundException('درخواست اطلاع‌رسانی یافت نشد');
     }
 
-    return this.prisma.productAlert.update({
-      where: { id: alertId },
+    await this.prisma.productAlert.update({
+      where: { id: alert.id },
       data: { status: AlertStatus.CANCELLED },
     });
+
+    return { success: true, message: 'درخواست اطلاع‌رسانی با موفقیت لغو شد' };
+  }
+
+  async getRestockStats(productId: number) {
+    const pid = Number(productId);
+    const count = await this.prisma.productAlert.count({
+      where: { productId: pid, status: AlertStatus.PENDING },
+    });
+
+    return {
+      productId: pid,
+      pendingAlertsCount: count,
+    };
+  }
+
+  async sendRestockSmsManual(productId: number, customMessage?: string) {
+    const pid = Number(productId);
+    const product = await this.prisma.product.findUnique({
+      where: { id: pid },
+    });
+
+    if (!product) {
+      throw new NotFoundException('محصول مورد نظر یافت نشد');
+    }
+
+    const pendingAlerts = await this.prisma.productAlert.findMany({
+      where: { productId: pid, status: AlertStatus.PENDING },
+    });
+
+    if (pendingAlerts.length === 0) {
+      return { success: true, count: 0, message: 'هیچ درخواست در انتظاری برای این کالا وجود ندارد.' };
+    }
+
+    let successCount = 0;
+    const defaultMsg = `مشتری گرامی، کالای "${product.name}" در فروشگاه ویپ‌لب موجود شد. جهت خرید به سایت مراجعه فرمایید.\nلینک: https://vapelab.ir/products/${product.slug}`;
+    const textToSend = customMessage?.trim() || defaultMsg;
+
+    for (const alert of pendingAlerts) {
+      try {
+        await this.kavenegar.sendTextSms(alert.phoneNumber, textToSend);
+        await this.prisma.productAlert.update({
+          where: { id: alert.id },
+          data: {
+            status: AlertStatus.NOTIFIED,
+            notifiedAt: new Date(),
+          },
+        });
+        successCount++;
+      } catch (err) {
+        this.logger.error(`Error sending restock SMS to ${alert.phoneNumber}: ${err.message}`);
+      }
+    }
+
+    return {
+      success: true,
+      totalAlerts: pendingAlerts.length,
+      sentCount: successCount,
+      message: `پیامک به ${successCount} نفر از مشتریان با موفقیت ارسال شد.`,
+    };
   }
 }

@@ -12,6 +12,8 @@ export type RestockAlertItem = {
 
 const STORAGE_KEY = 'vapelab.restock_alerts';
 const subscribedAlerts = ref<RestockAlertItem[]>([]);
+const isRestockModalOpen = ref(false);
+const activeRestockProduct = ref<any>(null);
 
 export function useRestockAlerts() {
   const { user, requireAuth } = useAuth();
@@ -175,8 +177,8 @@ export function useRestockAlerts() {
   /**
    * عملیات مستقیم ثبت اشتراک از روی پروفایل کاربر (بدون باز شدن مودال اضافی)
    */
-  const doSubscribe = async (product: { id: string | number; slug: string; name: string }) => {
-    const phone = user.value?.phoneNumber || undefined;
+  const doSubscribe = async (product: { id: string | number; slug: string; name: string }, explicitPhone?: string) => {
+    const phone = explicitPhone || user.value?.phoneNumber || undefined;
 
     // درخواست فعال‌سازی نوتیفیکیشن مرورگر در پس‌زمینه
     requestBrowserPermission();
@@ -261,7 +263,27 @@ export function useRestockAlerts() {
     }
   };
 
+  const openRestockModal = (product: any) => {
+    activeRestockProduct.value = product;
+    isRestockModalOpen.value = true;
+  };
+  const closeRestockModal = () => {
+    isRestockModalOpen.value = false;
+    activeRestockProduct.value = null;
+  };
+  const subscribe = async (phone?: string) => {
+    if (activeRestockProduct.value) {
+      await doSubscribe(activeRestockProduct.value, phone);
+      closeRestockModal();
+    }
+  };
+
   return {
+    isRestockModalOpen,
+    activeRestockProduct,
+    openRestockModal,
+    closeRestockModal,
+    subscribe,
     subscribedAlerts,
     isSubscribed,
     toggleRestock,

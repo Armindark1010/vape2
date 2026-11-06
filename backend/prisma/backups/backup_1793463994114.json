@@ -1,0 +1,1105 @@
+{
+  "timestamp": "2026-10-31T16:26:33.907Z",
+  "users": [
+    {
+      "id": 1,
+      "name": "آرمان رضایی",
+      "email": "demo@vapora.ir",
+      "phone": "09123456789",
+      "username": null,
+      "passwordHash": null,
+      "role": "CUSTOMER",
+      "isAdmin": true,
+      "createdAt": "2025-08-06T12:10:50.256Z"
+    },
+    {
+      "id": 2,
+      "name": "Store Admin",
+      "email": "admin@vapora.ir",
+      "phone": "02191002233",
+      "username": null,
+      "passwordHash": null,
+      "role": "CUSTOMER",
+      "isAdmin": true,
+      "createdAt": "2025-08-06T12:10:50.256Z"
+    },
+    {
+      "id": 3,
+      "name": "مدیر ارشد ویپ‌لب",
+      "email": "admin@vapelab.ir",
+      "phone": "09120000001",
+      "username": "admin",
+      "passwordHash": "$2b$10$z3.9YnFey2ieTnLBqbpMB.b8uiQRIW8O/DHJhjkTbItK4.2h4cFtW",
+      "role": "ADMIN",
+      "isAdmin": true,
+      "createdAt": "2026-10-31T14:01:48.032Z"
+    },
+    {
+      "id": 4,
+      "name": "تأمین‌کننده مرکزی ویپ‌لب",
+      "email": "supplier@vapelab.ir",
+      "phone": "09120000002",
+      "username": "supplier1",
+      "passwordHash": "$2b$10$lA1sGzkCGLxgRIgQlR5L2ud0fuyUSBrLmQHY9CUY4Nn/bpgEh66qi",
+      "role": "SUPPLIER",
+      "isAdmin": false,
+      "createdAt": "2026-10-31T14:01:48.136Z"
+    },
+    {
+      "id": 5,
+      "name": "09912211302",
+      "email": "09912211302@vapelab.local",
+      "phone": "09912211302",
+      "username": null,
+      "passwordHash": null,
+      "role": "CUSTOMER",
+      "isAdmin": false,
+      "createdAt": "2026-10-31T11:59:15.051Z"
+    }
+  ],
+  "brands": [
+    {
+      "id": 1,
+      "name": "ELFBAR",
+      "slug": "elfbar",
+      "description": "پرفروش‌ترین برند پاد یک‌بارمصرف جهان"
+    },
+    {
+      "id": 2,
+      "name": "VOZOL",
+      "slug": "vozol",
+      "description": "پادهای قدرتمند با طعم‌های خاص"
+    },
+    {
+      "id": 3,
+      "name": "LOST MARY",
+      "slug": "lostmary",
+      "description": "طراحی مدرن و طعم‌های میوه‌ای جذاب"
+    },
+    {
+      "id": 4,
+      "name": "IGET",
+      "slug": "iget",
+      "description": "انتخاب کلاسیک واپرهای حرفه‌ای"
+    },
+    {
+      "id": 5,
+      "name": "AIR BAR",
+      "slug": "airbar",
+      "description": "پادهای سبک و خوش‌دست"
+    },
+    {
+      "id": 6,
+      "name": "VAPORESSO",
+      "slug": "vaporesso",
+      "description": "مود و پاد سیستم با تکنولوژی روز"
+    },
+    {
+      "id": 7,
+      "name": "NASTY",
+      "slug": "nasty",
+      "description": "سالت‌های مطرح مالزیایی"
+    },
+    {
+      "id": 8,
+      "name": "VAPORA",
+      "slug": "vapora",
+      "description": "برند اختصاصی فروشگاه ویپورا"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "پاد یک‌بارمصرف",
+      "slug": "pods",
+      "description": "پادهای آماده مصرف با طعم‌های متنوع — بدون نیاز به کویل و سالت جدا",
+      "image": "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "featured": true
+    },
+    {
+      "id": 2,
+      "name": "سالت نیکوتین",
+      "slug": "salts",
+      "description": "نمک نیکوتین اصل با نیکوتین ۲۰ تا ۵۰ — حس نرم و شبیه سیگار",
+      "image": "https://images.pexels.com/photos/12345382/pexels-photo-12345382.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "featured": true
+    },
+    {
+      "id": 3,
+      "name": "مود و پاد سیستم",
+      "slug": "mods",
+      "description": "دستگاه‌های قابل شارژ با کویل قابل تعویض برای مصرف روزانه و اقتصادی",
+      "image": "https://images.pexels.com/photos/17962161/pexels-photo-17962161.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "featured": true
+    },
+    {
+      "id": 4,
+      "name": "لوازم جانبی",
+      "slug": "gear",
+      "description": "کویل، چارجر، کیس و ابزار تمیزکاری برای نگهداری حرفه‌ای",
+      "image": "https://images.pexels.com/photos/17962164/pexels-photo-17962164.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "featured": true
+    }
+  ],
+  "suppliers": [
+    {
+      "id": 1,
+      "userId": 4,
+      "companyName": "شرکت واردات و پخش نیکوتین‌پارس",
+      "contactName": "مهندس صادقی",
+      "phone": "09120000002",
+      "email": "supplier@vapelab.ir",
+      "iban": "IR820120000000001234567890",
+      "isActive": true,
+      "commissionRate": 10,
+      "createdAt": "2026-10-31T14:01:48.137Z",
+      "updatedAt": "2026-10-31T14:01:48.137Z"
+    }
+  ],
+  "products": [
+    {
+      "id": 3,
+      "slug": "lostmary-os5000",
+      "name": "LOST MARY OS5000",
+      "tagline": "۵۰۰۰ پاف · طراحی مدرن ✨",
+      "description": "لاست ماری با بدنه‌ی مات و ارگونومیک، ۵۰۰۰ پاف ماندگاری دارد و طعم‌هایش بین‌المللی هستند. سایز کوچک و وزن سبکش برای همراه‌داشتن روزانه عالی است.",
+      "specs": {
+        "options": "{\"flavors\":[\"هلو 🍑\",\"توت‌فرنگی 🍓\",\"آب‌میوه قرمز\",\"انگور\"],\"nicotine\":[\"20\",\"50\"],\"puffs\":\"۵۰۰۰ پاف\"}",
+        "باتری": "500 mAh",
+        "مقدار جوخ": "13 ml"
+      },
+      "price": 1020000,
+      "discountPrice": null,
+      "rating": 47,
+      "reviewCount": 142,
+      "stock": 55,
+      "brandId": 3,
+      "categoryId": 1,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/17962161/pexels-photo-17962161.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": false,
+      "bestSeller": true,
+      "createdAt": "2026-02-22T12:10:50.286Z"
+    },
+    {
+      "id": 2,
+      "slug": "vozol-gecko-10000",
+      "name": "VOZOL GECKO 10000",
+      "tagline": "۱۰۰۰۰ پاف · نمایشگر دیجیتال ⚡",
+      "description": "غول جدید ووزول با ۱۰۰۰۰ پاف و نمایشگر دیجیتال که میزان جوخ و باتری را نشان می‌دهد. جریان هوا قابل تنظیم است و طعم‌ها تا آخرین پاف یکدست می‌مانند. انتخاب اول کسانی که دنبال ماندگاری بالا هستند.",
+      "specs": {
+        "options": "{\"flavors\":[\"بلوبری آیس 🫐\",\"انبه 🥭\",\"هندوانه سرد\",\"گریپ‌فروت\",\"کولا یخی\"],\"nicotine\":[\"20\",\"50\"],\"puffs\":\"۱۰۰۰۰ پاف\"}",
+        "باتری": "850 mAh",
+        "نمایشگر": "دیجیتال OLED",
+        "مقدار جوخ": "22 ml"
+      },
+      "price": 1480000,
+      "discountPrice": null,
+      "rating": 45,
+      "reviewCount": 87,
+      "stock": 29,
+      "brandId": 2,
+      "categoryId": 1,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": true,
+      "bestSeller": false,
+      "createdAt": "2026-09-02T12:10:50.284Z"
+    },
+    {
+      "id": 1,
+      "slug": "elfbar-te6000",
+      "name": "ELFBAR TE6000",
+      "tagline": "۶۰۰۰ پاف · طعم انگور یخ 🍇",
+      "description": "ال اف بار TE6000 با ۶۰۰۰ پاف، ۱۵ میلی‌لیتر جوخ و باتری ۶۰۰ میلی‌آمپری، محبوب‌ترین انتخاب واپرهای ایرانی است. طعم انگور یخ با سردی متعادل، کشیدنش را به یک عادت خوش‌طعم تبدیل می‌کند. دارای هولوگرام اصالت و کد استعلام.",
+      "specs": {
+        "options": "{\"flavors\":[\"انگور یخ 🍇\",\"هندوانه یخی 🍉\",\"بلوبری رازبری\",\"توت‌فرنگی کیوی\",\"سیب سبز 🍏\",\"لیچی\"],\"nicotine\":[\"20\",\"50\"],\"puffs\":\"۶۰۰۰ پاف\"}",
+        "شارژ": "Type-C",
+        "باتری": "600 mAh",
+        "نوع طعم": "میوه‌ای یخی",
+        "مقدار جوخ": "15 ml"
+      },
+      "price": 1150000,
+      "discountPrice": 990000,
+      "rating": 48,
+      "reviewCount": 214,
+      "stock": 46,
+      "brandId": 1,
+      "categoryId": 1,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": true,
+      "newArrival": false,
+      "bestSeller": true,
+      "createdAt": "2026-05-13T12:10:50.282Z"
+    },
+    {
+      "id": 4,
+      "slug": "iget-xxl-5000",
+      "name": "IGET XXL 5000",
+      "tagline": "۵۰۰۰ پاف · طعم کلاسیک",
+      "description": "آی‌گت XXL با ۵۰۰۰ پاف و سایز بزرگ، انتخاب قدیمی‌های دنیای ویپ است. بخار حجیم و کشش باز، تجربه‌ای نزدیک به مودهای حرفه‌ای می‌دهد.",
+      "specs": {
+        "options": "{\"flavors\":[\"انگور\",\"بلوبری\",\"نعناع\",\"توت‌فرنگی\"],\"nicotine\":[\"20\",\"50\"],\"puffs\":\"۵۰۰۰ پاف\"}",
+        "باتری": "550 mAh",
+        "مقدار جوخ": "12 ml"
+      },
+      "price": 890000,
+      "discountPrice": null,
+      "rating": 44,
+      "reviewCount": 96,
+      "stock": 40,
+      "brandId": 4,
+      "categoryId": 1,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/14472703/pexels-photo-14472703.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/11587603/pexels-photo-11587603.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": true,
+      "newArrival": false,
+      "bestSeller": false,
+      "createdAt": "2025-11-14T12:10:50.287Z"
+    },
+    {
+      "id": 5,
+      "slug": "airbar-lux-4000",
+      "name": "AIR BAR LUX 4000",
+      "tagline": "۴۰۰۰ پاف · سبک و خوش‌دست",
+      "description": "ایربار سبک‌ترین انتخاب روزمره است؛ ۴۰۰۰ پاف در بدنه‌ای باریک که توی جیب گم می‌شود. طعم نعناع یخی‌اش معروف است.",
+      "specs": {
+        "options": "{\"flavors\":[\"نعناع یخی ❄️\",\"لیمو\",\"انگور\",\"هندوانه\"],\"nicotine\":[\"20\",\"50\"],\"puffs\":\"۴۰۰۰ پاف\"}",
+        "باتری": "450 mAh",
+        "مقدار جوخ": "10 ml"
+      },
+      "price": 740000,
+      "discountPrice": null,
+      "rating": 43,
+      "reviewCount": 61,
+      "stock": 64,
+      "brandId": 5,
+      "categoryId": 1,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/11587603/pexels-photo-11587603.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/14472703/pexels-photo-14472703.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": false,
+      "bestSeller": false,
+      "createdAt": "2026-06-12T12:10:50.288Z"
+    },
+    {
+      "id": 6,
+      "slug": "vapora-puff-8000",
+      "name": "VAPORA PUFF 8000",
+      "tagline": "۸۰۰۰ پاف · برند اختصاصی ویپورا 🏷️",
+      "description": "پاد اختصاصی فروشگاه ویپورا با ۸۰۰۰ پاف و بهترین طعم‌های پرفروش بازار، با قیمتی منصفانه‌تر و همان کیفیت اورجینال.",
+      "specs": {
+        "options": "{\"flavors\":[\"انگور یخ\",\"بلوبری آیس\",\"هندوانه سرد\",\"انبه\"],\"nicotine\":[\"20\",\"50\"],\"puffs\":\"۸۰۰۰ پاف\"}",
+        "باتری": "650 mAh",
+        "مقدار جوخ": "16 ml"
+      },
+      "price": 1190000,
+      "discountPrice": 1050000,
+      "rating": 46,
+      "reviewCount": 38,
+      "stock": 28,
+      "brandId": 8,
+      "categoryId": 1,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/14472703/pexels-photo-14472703.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": true,
+      "bestSeller": false,
+      "createdAt": "2026-09-06T12:10:50.289Z"
+    },
+    {
+      "id": 7,
+      "slug": "vapora-salt-30",
+      "name": "VAPORA SALT 30ml",
+      "tagline": "سالت ۳۰ میل · طعم انگور یخ",
+      "description": "سالت اختصاصی ویپورا با ۳۰ میلی‌لیتر حجم و نیکوتین ۳۵/۵۰. ترکیب انگور و سردی نعناع، تجربه‌ای نرم و بی‌خشونت می‌سازد. مناسب دستگاه‌های پاد با کویل بالا.",
+      "specs": {
+        "حجم": "30 ml",
+        "options": "{\"flavors\":[\"انگور یخ 🍇\",\"بلوبری 🫐\",\"هندوانه\",\"تنباکو و کارامل\",\"نعناع\"],\"nicotine\":[\"35\",\"50\"],\"salt\":\"نمک نیکوتین\"}",
+        "کشور": "مالزی",
+        "نسبت VG/PG": "50/50"
+      },
+      "price": 385000,
+      "discountPrice": null,
+      "rating": 46,
+      "reviewCount": 173,
+      "stock": 80,
+      "brandId": 8,
+      "categoryId": 2,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/12345382/pexels-photo-12345382.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/13870347/pexels-photo-13870347.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": false,
+      "bestSeller": true,
+      "createdAt": "2026-04-13T12:10:50.290Z"
+    },
+    {
+      "id": 8,
+      "slug": "elfbar-salt-30",
+      "name": "ELFBAR SALT 30ml",
+      "tagline": "سالت ۳۰ میل ال اف بار · بلوبری",
+      "description": "سالت اورجینال ال اف بار در بطری ۳۰ میل با طعم بلوبری شیرین و سردی ملایم. نیکوتین نرم و با کیفیت ثابت.",
+      "specs": {
+        "حجم": "30 ml",
+        "options": "{\"flavors\":[\"بلوبری\",\"انگور\",\"هندوانه\",\"توت‌فرنگی\"],\"nicotine\":[\"35\",\"50\"]}",
+        "کشور": "مالزی"
+      },
+      "price": 420000,
+      "discountPrice": null,
+      "rating": 45,
+      "reviewCount": 84,
+      "stock": 60,
+      "brandId": 1,
+      "categoryId": 2,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/13870347/pexels-photo-13870347.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/12345382/pexels-photo-12345382.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": false,
+      "bestSeller": false,
+      "createdAt": "2026-04-13T12:10:50.291Z"
+    },
+    {
+      "id": 9,
+      "slug": "nasty-salt-30",
+      "name": "NASTY SALT 30ml",
+      "tagline": "سالت نستی · طعم ترش و شیرین 🍬",
+      "description": "ناستی با طعم‌های جسورانه‌اش معروف است؛ ترکیب ترش و شیرین با سردی که طرفداران خاص خودش را دارد.",
+      "specs": {
+        "حجم": "30 ml",
+        "options": "{\"flavors\":[\"کشنده ترش 🍬\",\"انگور یخ\",\"بلوبری\"],\"nicotine\":[\"35\",\"50\"]}",
+        "کشور": "مالزی"
+      },
+      "price": 465000,
+      "discountPrice": null,
+      "rating": 44,
+      "reviewCount": 51,
+      "stock": 36,
+      "brandId": 7,
+      "categoryId": 2,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/12345382/pexels-photo-12345382.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": true,
+      "bestSeller": false,
+      "createdAt": "2026-09-04T12:10:50.292Z"
+    },
+    {
+      "id": 10,
+      "slug": "vaporesso-luxe-xr",
+      "name": "VAPORESSO LUXE XR",
+      "tagline": "مود ۴۰ وات · کویل GTX 🔥",
+      "description": "لوکس XR با تراشه AXON تا ۴۰ وات توان، باتری ۱۸۰۰ میلی‌آمپری داخلی و کویل‌های GTX، یکی از بهترین مودهای جمع‌وجور برای مصرف روزانه است. دکمه کشیدن خودکار هم دارد.",
+      "specs": {
+        "شارژ": "Type-C 2A",
+        "باتری": "1800 mAh",
+        "توان خروجی": "5-40 W",
+        "مقدار تانک": "4 ml",
+        "کویل سازگار": "GTX 0.6/0.8 ohm"
+      },
+      "price": 2450000,
+      "discountPrice": 2150000,
+      "rating": 48,
+      "reviewCount": 122,
+      "stock": 14,
+      "brandId": 6,
+      "categoryId": 3,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/14472703/pexels-photo-14472703.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": true,
+      "newArrival": false,
+      "bestSeller": true,
+      "createdAt": "2025-12-24T12:10:50.293Z"
+    },
+    {
+      "id": 11,
+      "slug": "vaporesso-xros3",
+      "name": "VAPORESSO XROS 3",
+      "tagline": "پاد سیستم XROS · ۱۰۰۰ میلی‌آمپر",
+      "description": "ایکس‌راس ۳ با طراحی باریک و باتری ۱۰۰۰ میلی‌آمپری، محبوب‌ترین پاد سیستم جهان است. کویل‌های ۰.۶ و ۰.۸ اهم با طعم عالی.",
+      "specs": {
+        "شارژ": "Type-C",
+        "باتری": "1000 mAh",
+        "مقدار تانک": "2 ml",
+        "کویل سازگار": "XROS 0.6/0.8/1.0 ohm"
+      },
+      "price": 1890000,
+      "discountPrice": null,
+      "rating": 47,
+      "reviewCount": 98,
+      "stock": 22,
+      "brandId": 6,
+      "categoryId": 3,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/17962161/pexels-photo-17962161.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": false,
+      "bestSeller": false,
+      "createdAt": "2026-03-14T12:10:50.296Z"
+    },
+    {
+      "id": 12,
+      "slug": "vozol-pod-pro",
+      "name": "VOZOL POD PRO 30W",
+      "tagline": "پاد ۳۰ وات · کویل مشبک",
+      "description": "پاد پرو ووزول با توان ۳۰ وات و باتری ۱۵۰۰ میلی‌آمپری، بخار حجیم و طعم قوی می‌دهد. برای سالت‌های غلیظ عالی است.",
+      "specs": {
+        "شارژ": "Type-C 2A",
+        "باتری": "1500 mAh",
+        "توان خروجی": "5-30 W",
+        "مقدار تانک": "4.5 ml"
+      },
+      "price": 1620000,
+      "discountPrice": null,
+      "rating": 45,
+      "reviewCount": 57,
+      "stock": 18,
+      "brandId": 2,
+      "categoryId": 3,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/17962161/pexels-photo-17962161.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": false,
+      "bestSeller": false,
+      "createdAt": "2026-06-02T12:10:50.297Z"
+    },
+    {
+      "id": 13,
+      "slug": "xros-coil-pack",
+      "name": "XROS Coil Pack",
+      "tagline": "کویل اورجینال XROS — پک ۴ عددی",
+      "description": "کویل‌های اورجینال واپرسو برای دستگاه‌های XROS. پک ۴ عددی با مقاومت‌های ۰.۶، ۰.۸ و ۱.۰ اهم.",
+      "specs": {
+        "تعداد": "4 عدد",
+        "سازگاری": "XROS 1/2/3/4",
+        "مقاومت‌ها": "0.6 / 0.8 / 1.0 ohm"
+      },
+      "price": 320000,
+      "discountPrice": null,
+      "rating": 45,
+      "reviewCount": 210,
+      "stock": 120,
+      "brandId": 6,
+      "categoryId": 4,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/17962164/pexels-photo-17962164.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/13870347/pexels-photo-13870347.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": false,
+      "bestSeller": true,
+      "createdAt": "2025-11-14T12:10:50.299Z"
+    },
+    {
+      "id": 14,
+      "slug": "magnet-charger",
+      "name": "Magnetic Charger",
+      "tagline": "چارج‌ر مگنتی پاد — شارژ سریع",
+      "description": "چارج‌ر مگنتی با گیره‌ی قوی و شارژ سریع Type-C؛ مخصوص پادهای یک‌بارمصرف دارای درگاه مگنت.",
+      "specs": {
+        "اتصال": "Type-C + مگنت",
+        "خروجی": "5V/2A",
+        "طول کابل": "30 cm"
+      },
+      "price": 145000,
+      "discountPrice": null,
+      "rating": 42,
+      "reviewCount": 33,
+      "stock": 90,
+      "brandId": 8,
+      "categoryId": 4,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/11587603/pexels-photo-11587603.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": false,
+      "bestSeller": false,
+      "createdAt": "2026-07-12T12:10:50.300Z"
+    },
+    {
+      "id": 15,
+      "slug": "cleaning-kit",
+      "name": "Vape Cleaning Kit",
+      "tagline": "کیت تمیزکاری حرفه‌ای",
+      "description": "برس‌ها، دستمال میکروفایبر و محلول تمیزکننده برای افزایش عمر کویل و تمیزی همیشگی دستگاه.",
+      "specs": {
+        "شامل": "3 برس + میکروفایبر + محلول 50ml",
+        "کاربرد": "مود، تانک و پاد"
+      },
+      "price": 265000,
+      "discountPrice": null,
+      "rating": 44,
+      "reviewCount": 27,
+      "stock": 24,
+      "brandId": 8,
+      "categoryId": 4,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/13870347/pexels-photo-13870347.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/11587603/pexels-photo-11587603.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": false,
+      "bestSeller": false,
+      "createdAt": "2026-08-01T12:10:50.301Z"
+    },
+    {
+      "id": 16,
+      "slug": "pod-leather-case",
+      "name": "Pod Leather Case",
+      "tagline": "کیس چرمی پاد — ضدضربه",
+      "description": "کیس چرم طبیعی با لایه‌ی ضدضربه داخلی؛ مناسب پادهای باریک ۵۰۰۰ تا ۱۰۰۰۰ پافی.",
+      "specs": {
+        "جنس": "چرم طبیعی",
+        "رنگ": "مشکی",
+        "ابعاد": "مناسب پادهای باریک"
+      },
+      "price": 190000,
+      "discountPrice": null,
+      "rating": 43,
+      "reviewCount": 19,
+      "stock": 34,
+      "brandId": 8,
+      "categoryId": 4,
+      "supplierId": 1,
+      "images": [
+        "https://images.pexels.com/photos/17962161/pexels-photo-17962161.jpeg?auto=compress&cs=tinysrgb&w=800",
+        "https://images.pexels.com/photos/17962164/pexels-photo-17962164.jpeg?auto=compress&cs=tinysrgb&w=800"
+      ],
+      "featured": false,
+      "newArrival": true,
+      "bestSeller": false,
+      "createdAt": "2026-08-31T12:10:50.302Z"
+    }
+  ],
+  "orders": [
+    {
+      "id": 1,
+      "number": "VPR-1001",
+      "userId": 1,
+      "reservationId": null,
+      "name": "آرمان رضایی",
+      "email": "demo@vapora.ir",
+      "phone": "09123456789",
+      "shipping": {
+        "zip": "1998765432",
+        "city": "تهران",
+        "line1": "تهران، سعادت‌آباد، بلوار دریا، پلاک ۱۸",
+        "country": "Iran"
+      },
+      "couponCode": null,
+      "subtotal": 2250000,
+      "discount": 337500,
+      "shippingFee": 65000,
+      "total": 1977500,
+      "currency": "IRT",
+      "status": "delivered",
+      "trackingCode": null,
+      "courier": null,
+      "platformCommissionRate": 10,
+      "platformCommissionAmount": 0,
+      "supplierPayableAmount": 0,
+      "isSettled": false,
+      "createdAt": "2026-06-27T12:10:50.307Z"
+    },
+    {
+      "id": 2,
+      "number": "VPR-1002",
+      "userId": 1,
+      "reservationId": null,
+      "name": "آرمان رضایی",
+      "email": "demo@vapora.ir",
+      "phone": "09123456789",
+      "shipping": {
+        "zip": "1998765432",
+        "city": "تهران",
+        "line1": "تهران، سعادت‌آباد، بلوار دریا، پلاک ۱۸",
+        "country": "Iran"
+      },
+      "couponCode": null,
+      "subtotal": 1980000,
+      "discount": 297000,
+      "shippingFee": 65000,
+      "total": 1748000,
+      "currency": "IRT",
+      "status": "delivered",
+      "trackingCode": null,
+      "courier": null,
+      "platformCommissionRate": 10,
+      "platformCommissionAmount": 0,
+      "supplierPayableAmount": 0,
+      "isSettled": false,
+      "createdAt": "2026-08-01T12:10:50.307Z"
+    },
+    {
+      "id": 3,
+      "number": "VPR-1003",
+      "userId": 1,
+      "reservationId": null,
+      "name": "آرمان رضایی",
+      "email": "demo@vapora.ir",
+      "phone": "09123456789",
+      "shipping": {
+        "zip": "1998765432",
+        "city": "تهران",
+        "line1": "تهران، سعادت‌آباد، بلوار دریا، پلاک ۱۸",
+        "country": "Iran"
+      },
+      "couponCode": null,
+      "subtotal": 2470000,
+      "discount": 370500,
+      "shippingFee": 0,
+      "total": 2099500,
+      "currency": "IRT",
+      "status": "delivered",
+      "trackingCode": null,
+      "courier": null,
+      "platformCommissionRate": 10,
+      "platformCommissionAmount": 0,
+      "supplierPayableAmount": 0,
+      "isSettled": false,
+      "createdAt": "2026-08-29T12:10:50.307Z"
+    },
+    {
+      "id": 4,
+      "number": "VPR-1004",
+      "userId": 1,
+      "reservationId": null,
+      "name": "آرمان رضایی",
+      "email": "demo@vapora.ir",
+      "phone": "09123456789",
+      "shipping": {
+        "zip": "1998765432",
+        "city": "تهران",
+        "line1": "تهران، سعادت‌آباد، بلوار دریا، پلاک ۱۸",
+        "country": "Iran"
+      },
+      "couponCode": null,
+      "subtotal": 1485000,
+      "discount": 0,
+      "shippingFee": 65000,
+      "total": 1550000,
+      "currency": "IRT",
+      "status": "shipped",
+      "trackingCode": null,
+      "courier": null,
+      "platformCommissionRate": 10,
+      "platformCommissionAmount": 0,
+      "supplierPayableAmount": 0,
+      "isSettled": false,
+      "createdAt": "2026-09-05T12:10:50.307Z"
+    },
+    {
+      "id": 5,
+      "number": "VPR-1005",
+      "userId": 1,
+      "reservationId": null,
+      "name": "آرمان رضایی",
+      "email": "demo@vapora.ir",
+      "phone": "09123456789",
+      "shipping": {
+        "zip": "1998765432",
+        "city": "تهران",
+        "line1": "تهران، سعادت‌آباد، بلوار دریا، پلاک ۱۸",
+        "country": "Iran"
+      },
+      "couponCode": null,
+      "subtotal": 3150000,
+      "discount": 472500,
+      "shippingFee": 0,
+      "total": 2677500,
+      "currency": "IRT",
+      "status": "processing",
+      "trackingCode": null,
+      "courier": null,
+      "platformCommissionRate": 10,
+      "platformCommissionAmount": 0,
+      "supplierPayableAmount": 0,
+      "isSettled": false,
+      "createdAt": "2026-09-08T12:10:50.307Z"
+    },
+    {
+      "id": 6,
+      "number": "VPR-1006",
+      "userId": 1,
+      "reservationId": null,
+      "name": "آرمان رضایی",
+      "email": "demo@vapora.ir",
+      "phone": "09123456789",
+      "shipping": {
+        "zip": "1998765432",
+        "city": "تهران",
+        "line1": "تهران، سعادت‌آباد، بلوار دریا، پلاک ۱۸",
+        "country": "Iran"
+      },
+      "couponCode": null,
+      "subtotal": 2080000,
+      "discount": 312000,
+      "shippingFee": 65000,
+      "total": 1833000,
+      "currency": "IRT",
+      "status": "pending",
+      "trackingCode": null,
+      "courier": null,
+      "platformCommissionRate": 10,
+      "platformCommissionAmount": 0,
+      "supplierPayableAmount": 0,
+      "isSettled": false,
+      "createdAt": "2026-09-09T12:10:50.307Z"
+    },
+    {
+      "id": 10,
+      "number": "VPR-579895-4813",
+      "userId": 5,
+      "reservationId": 4,
+      "name": "09912211302",
+      "email": "09912211302@vapelab.local",
+      "phone": "09912211302",
+      "shipping": {
+        "zip": "000000000",
+        "city": "تهران",
+        "line1": "تست",
+        "country": "Iran"
+      },
+      "couponCode": null,
+      "subtotal": 1480000,
+      "discount": 0,
+      "shippingFee": 45000,
+      "total": 1525000,
+      "currency": "IRT",
+      "status": "cancelled",
+      "trackingCode": null,
+      "courier": "پست پیشتاز",
+      "platformCommissionRate": 10,
+      "platformCommissionAmount": 148000,
+      "supplierPayableAmount": 1332000,
+      "isSettled": false,
+      "createdAt": "2026-10-31T12:09:39.896Z"
+    },
+    {
+      "id": 11,
+      "number": "VPR-941763-3586",
+      "userId": 5,
+      "reservationId": 5,
+      "name": "09912211302",
+      "email": "09912211302@vapelab.local",
+      "phone": "09912211302",
+      "shipping": {
+        "zip": "1212121212",
+        "city": "تهران",
+        "line1": "تسیتسیت , سسی  , sdksd,",
+        "line2": "سیسی",
+        "country": "Iran"
+      },
+      "couponCode": null,
+      "subtotal": 29400000,
+      "discount": 0,
+      "shippingFee": 0,
+      "total": 29400000,
+      "currency": "IRT",
+      "status": "pending",
+      "trackingCode": null,
+      "courier": null,
+      "platformCommissionRate": 10,
+      "platformCommissionAmount": 2940000,
+      "supplierPayableAmount": 26460000,
+      "isSettled": false,
+      "createdAt": "2026-10-31T16:09:01.764Z"
+    }
+  ],
+  "orderItems": [
+    {
+      "id": 1,
+      "orderId": 1,
+      "productId": 2,
+      "name": "VOZOL GECKO 10000",
+      "image": "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 1480000,
+      "qty": 1,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 2,
+      "orderId": 1,
+      "productId": 7,
+      "name": "VAPORA SALT 30ml",
+      "image": "https://images.pexels.com/photos/12345382/pexels-photo-12345382.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 385000,
+      "qty": 2,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 3,
+      "orderId": 2,
+      "productId": 1,
+      "name": "ELFBAR TE6000",
+      "image": "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 990000,
+      "qty": 2,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 4,
+      "orderId": 3,
+      "productId": 10,
+      "name": "VAPORESSO LUXE XR",
+      "image": "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 2150000,
+      "qty": 1,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 5,
+      "orderId": 3,
+      "productId": 13,
+      "name": "XROS Coil Pack",
+      "image": "https://images.pexels.com/photos/17962164/pexels-photo-17962164.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 320000,
+      "qty": 1,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 6,
+      "orderId": 4,
+      "productId": 3,
+      "name": "LOST MARY OS5000",
+      "image": "https://images.pexels.com/photos/17962161/pexels-photo-17962161.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 1020000,
+      "qty": 1,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 7,
+      "orderId": 4,
+      "productId": 9,
+      "name": "NASTY SALT 30ml",
+      "image": "https://images.pexels.com/photos/12345382/pexels-photo-12345382.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 465000,
+      "qty": 1,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 8,
+      "orderId": 5,
+      "productId": 6,
+      "name": "VAPORA PUFF 8000",
+      "image": "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 1050000,
+      "qty": 3,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 9,
+      "orderId": 6,
+      "productId": 11,
+      "name": "VAPORESSO XROS 3",
+      "image": "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 1890000,
+      "qty": 1,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 10,
+      "orderId": 6,
+      "productId": 16,
+      "name": "Pod Leather Case",
+      "image": "https://images.pexels.com/photos/17962161/pexels-photo-17962161.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 190000,
+      "qty": 1,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 14,
+      "orderId": 10,
+      "productId": 2,
+      "name": "VOZOL GECKO 10000",
+      "image": "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 1480000,
+      "qty": 1,
+      "flavor": null,
+      "nicotine": null
+    },
+    {
+      "id": 15,
+      "orderId": 11,
+      "productId": 6,
+      "name": "VAPORA PUFF 8000",
+      "image": "https://images.pexels.com/photos/17962162/pexels-photo-17962162.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "price": 1050000,
+      "qty": 28,
+      "flavor": null,
+      "nicotine": null
+    }
+  ],
+  "reservations": [
+    {
+      "id": 1,
+      "userId": null,
+      "token": "verify_res_1793445015023",
+      "status": "EXPIRED",
+      "expiresAt": "2026-10-31T11:20:15.023Z",
+      "createdAt": "2026-10-31T11:10:15.027Z"
+    },
+    {
+      "id": 2,
+      "userId": null,
+      "token": "verify_res_1793445058491",
+      "status": "EXPIRED",
+      "expiresAt": "2026-10-31T11:20:58.491Z",
+      "createdAt": "2026-10-31T11:10:58.495Z"
+    },
+    {
+      "id": 4,
+      "userId": 5,
+      "token": "res_31e1c9cb3fdc4a9b93e2e45b15fe02b9",
+      "status": "COMMITTED",
+      "expiresAt": "2026-10-31T12:17:56.758Z",
+      "createdAt": "2026-10-31T11:59:17.010Z"
+    },
+    {
+      "id": 5,
+      "userId": 5,
+      "token": "res_6e5ff793c8ce4762b2adab41e8622154",
+      "status": "RELEASED",
+      "expiresAt": "2026-10-31T16:17:59.223Z",
+      "createdAt": "2026-10-31T16:07:59.242Z"
+    }
+  ],
+  "reservationItems": [
+    {
+      "id": 1,
+      "reservationId": 1,
+      "productId": 1,
+      "quantity": 2
+    },
+    {
+      "id": 2,
+      "reservationId": 2,
+      "productId": 1,
+      "quantity": 2
+    },
+    {
+      "id": 8,
+      "reservationId": 4,
+      "productId": 2,
+      "quantity": 1
+    },
+    {
+      "id": 9,
+      "reservationId": 5,
+      "productId": 6,
+      "quantity": 28
+    }
+  ],
+  "banners": [
+    {
+      "id": 1,
+      "title": "نسل جدید پادسیستم‌های ۲۰۲۶",
+      "subtitle": "تجربه کام‌دهی نرم با سالت نیکوتین اصل مالزی",
+      "imageUrl": "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=1200",
+      "linkUrl": "/shop?cat=pods",
+      "badge": "تخفیف ویژه",
+      "isActive": true,
+      "displayOrder": 1,
+      "createdAt": "2026-10-31T14:01:48.146Z"
+    },
+    {
+      "id": 2,
+      "title": "انواع پاد یک‌بارمصرف الف‌بار",
+      "subtitle": "طعم‌های یخی و میوه‌ای با هولوگرام شرکتی",
+      "imageUrl": "https://images.pexels.com/photos/9996339/pexels-photo-9996339.jpeg?auto=compress&cs=tinysrgb&w=1200",
+      "linkUrl": "/shop?brand=elfbar",
+      "badge": "پرفروش‌ترین",
+      "isActive": true,
+      "displayOrder": 2,
+      "createdAt": "2026-10-31T14:01:48.146Z"
+    },
+    {
+      "id": 3,
+      "title": "test",
+      "subtitle": "test2 ",
+      "imageUrl": "https://images.pexels.com/photos/19344605/pexels-photo-19344605.jpeg?auto=compress&cs=tinysrgb&w=1200",
+      "linkUrl": "/shop",
+      "badge": "تخفیف ویژه",
+      "isActive": true,
+      "displayOrder": 1,
+      "createdAt": "2026-10-31T16:05:06.505Z"
+    }
+  ],
+  "mediaFiles": [
+    {
+      "id": 1,
+      "filename": "vape-1793463288307-sh1nac.png",
+      "originalName": "test-vape-pod.png",
+      "mimeType": "image/png",
+      "size": 70,
+      "url": "http://localhost:4000/uploads/2026/10/vape-1793463288307-sh1nac.png",
+      "bucket": "vapelab-media",
+      "key": "uploads/2026/10/vape-1793463288307-sh1nac.png",
+      "width": null,
+      "height": null,
+      "altText": null,
+      "uploadedBy": 3,
+      "createdAt": "2026-10-31T16:14:48.314Z",
+      "updatedAt": "2026-10-31T16:14:48.314Z"
+    }
+  ],
+  "globalSettings": [
+    {
+      "id": 1,
+      "key": "commission_rate",
+      "value": "10",
+      "description": "درصد کارمزد پیش‌فرض پلتفرم ویپ‌لب",
+      "updatedAt": "2026-10-31T14:01:47.900Z"
+    }
+  ]
+}

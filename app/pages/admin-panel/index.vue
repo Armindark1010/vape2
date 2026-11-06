@@ -1,355 +1,449 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted } from 'vue';
 
 definePageMeta({
-  layout: 'admin'
-})
+  layout: 'admin',
+});
 
-interface Stats {
-  totalRevenue: number
-  revenueGrowth: number
-  totalOrders: number
-  ordersGrowth: number
-  totalProducts: number
-  lowStockCount: number
-  outOfStockCount: number
-  pendingOrdersCount: number
+useSeoMeta({
+  title: 'داشبورد مدیریت ارشد ویپ‌لب',
+});
+
+interface StatsData {
+  totalRevenue: number;
+  revenueGrowth: number;
+  totalOrders: number;
+  ordersGrowth: number;
+  pendingOrdersCount: number;
+  completedOrdersCount: number;
+  totalCustomers: number;
+  activeSuppliers: number;
+  totalProducts: number;
+  pendingSettlementsCount: number;
+  platformCommission: number;
+  timeline: Array<{ date: string; revenue: number; orders: number; commission: number }>;
+  categoryDistribution: Array<{ name: string; slug: string; productCount: number }>;
 }
 
-const stats = ref<Stats>({
-  totalRevenue: 0,
-  revenueGrowth: 18.4,
-  totalOrders: 0,
-  ordersGrowth: 12.1,
-  totalProducts: 0,
-  lowStockCount: 0,
-  outOfStockCount: 0,
-  pendingOrdersCount: 0
-})
+const stats = ref<StatsData | null>(null);
+const orders = ref<any[]>([]);
+const loading = ref(true);
+const selectedOrder = ref<any | null>(null);
+const orderModalOpen = ref(false);
+const updatingOrder = ref(false);
 
-const recentOrders = ref<any[]>([])
-const loading = ref(true)
+const orderColumns = [
+  { key: 'orderNumber', label: 'شماره سفارش', sortable: true },
+  { key: 'customer', label: 'مشتری و شماره تماس' },
+  { key: 'createdAt', label: 'تاریخ ثبت', sortable: true },
+  { key: 'status', label: 'وضعیت سفارش', sortable: true, align: 'center' as const },
+  { key: 'total', label: 'مبلغ فاکتور', sortable: true, align: 'left' as const },
+  { key: 'actions', label: 'عملیات', align: 'center' as const },
+];
 
-function formatPrice(val: number) {
-  return (val || 0).toLocaleString('fa-IR') + ' تومان'
-}
-
-async function loadData() {
-  loading.value = true
+const loadData = async () => {
+  loading.value = true;
   try {
     const [statsRes, ordersRes] = await Promise.all([
-      $fetch<Stats>('/api/admin/stats').catch(() => null),
-      $fetch<any>('/api/admin/orders').catch(() => null)
-    ])
-
-    if (statsRes) stats.value = statsRes
-    if (ordersRes && ordersRes.orders) {
-      recentOrders.value = ordersRes.orders.slice(0, 5)
-    }
+      $fetch<StatsData>('/api/admin/stats'),
+      $fetch<{ orders: any[] }>('/api/admin/orders'),
+    ]);
+    stats.value = statsRes;
+    orders.value = ordersRes.orders || [];
   } catch (err) {
-    console.error('Failed to load dashboard data:', err)
+    console.warn('Error loading admin dashboard data:', err);
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
+
+const openOrderDetails = (order: any) => {
+  selectedOrder.value = { ...order };
+  orderModalOpen.value = true;
+};
+
+const saveOrderStatus = async () => {
+  if (!selectedOrder.value) return;
+  updatingOrder.value = true;
+  try {
+    await $fetch('/api/admin/orders', {
+      method: 'PATCH',
+      body: {
+        id: selectedOrder.value.id,
+        status: selectedOrder.value.status,
+        trackingCode: selectedOrder.value.trackingCode,
+        courier: selectedOrder.value.courier,
+      },
+    });
+    orderModalOpen.value = false;
+    await loadData();
+  } catch (err: any) {
+    alert('خطا در بروزرسانی سفارش: ' + (err?.data?.message || err.message));
+  } finally {
+    updatingOrder.value = false;
+  }
+};
+
+const getStatusBadgeVariant = (st: string) => {
+  switch (st) {
+    case 'delivered':
+    case 'paid':
+      return 'success';
+    case 'processing':
+    case 'shipped':
+      return 'blue';
+    case 'pending':
+      return 'warning';
+    case 'cancelled':
+    case 'refunded':
+      return 'danger';
+    default:
+      return 'neutral';
+  }
+};
+
+const getStatusLabel = (st: string) => {
+  switch (st) {
+    case 'pending': return 'در انتظار پرداخت';
+    case 'paid': return 'پرداخت شده';
+    case 'processing': return 'در حال پردازش انبار';
+    case 'shipped': return 'تحویل پیک / پست';
+    case 'delivered': return 'تحویل مشتری شده';
+    case 'cancelled': return 'لغو شده';
+    case 'refunded': return 'مسترد شده';
+    default: return st || 'نامشخص';
+  }
+};
+
+const formatCurrency = (val: number) => {
+  return (val || 0).toLocaleString('fa-IR') + ' تومان';
+};
+
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '---';
+  try {
+    const d = new Date(dateStr);
+    return new Intl.DateTimeFormat('fa-IR', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(d);
+  } catch {
+    return dateStr;
+  }
+};
 
 onMounted(() => {
-  loadData()
-})
+  loadData();
+});
 </script>
 
 <template>
-  <div class="space-y-6">
-    
-    <!-- Welcome Header & Quick Action Banner -->
-    <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-900/90 to-cyan-950/40 border border-slate-800 p-5 sm:p-7 shadow-xl">
-      <div class="absolute -left-12 -bottom-12 w-48 h-48 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div>
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold mb-2">
-            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-            داشبورد مدیریت یکپارچه VAPELAB (Nuxt 4)
-          </div>
-          <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">
-            خوش‌آمدید به پنل مدیریت ویپ‌لب
-          </h1>
-          <p class="text-xs sm:text-sm text-slate-400 mt-1">
-            مشاهده لحظه‌ای فروش، مدیریت سفارشات متصل به PostgreSQL و کنترل بنرهای اسلایدر صفحه اصلی
-          </p>
-        </div>
+  <DashboardUDashboardPanel>
+    <!-- Navbar Header -->
+    <template #header>
+      <DashboardUDashboardNavbar title="داشبورد نظارت و آمار جامع" badge="Real-time">
+        <template #right>
+          <button
+            @click="loadData"
+            class="px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-xs text-zinc-400 hover:text-white transition flex items-center gap-1.5 cursor-pointer"
+            title="بروزرسانی داده‌ها"
+          >
+            <DashboardIcon name="refresh" :size="14" />
+            <span class="hidden sm:inline">بروزرسانی</span>
+          </button>
+        </template>
+      </DashboardUDashboardNavbar>
+    </template>
 
-        <div class="flex items-center gap-2.5 w-full sm:w-auto">
-          <NuxtLink
-            to="/admin-panel/banners"
-            class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold hover:shadow-lg hover:shadow-cyan-500/25 transition active:scale-95"
-          >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            مدیریت بنرها
-          </NuxtLink>
-          <NuxtLink
-            to="/admin-panel/orders"
-            class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-bold transition active:scale-95"
-          >
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-            سفارشات جدید
-          </NuxtLink>
+    <!-- 8 Real KPI Cards Grid -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
+      <!-- 1. Total Revenue -->
+      <DashboardUDashboardKpiCard
+        title="درآمد ناخالص کل"
+        :value="formatCurrency(stats?.totalRevenue || 0)"
+        icon="revenue"
+        :growth="stats?.revenueGrowth"
+        subtitle="فروش موفق کل پلتفرم"
+        :loading="loading"
+      />
+
+      <!-- 2. Total Orders -->
+      <DashboardUDashboardKpiCard
+        title="تعداد کل سفارشات"
+        :value="(stats?.totalOrders || 0).toLocaleString('fa-IR') + ' سفارش'"
+        icon="orders"
+        :growth="stats?.ordersGrowth"
+        subtitle="مجموع تراکنش‌های ثبت شده"
+        :loading="loading"
+      />
+
+      <!-- 3. Pending Orders -->
+      <DashboardUDashboardKpiCard
+        title="سفارشات معلق"
+        :value="(stats?.pendingOrdersCount || 0).toLocaleString('fa-IR') + ' مورد'"
+        icon="clock"
+        subtitle="نیاز به پیگیری یا پرداخت"
+        :loading="loading"
+      />
+
+      <!-- 4. Completed Orders -->
+      <DashboardUDashboardKpiCard
+        title="سفارشات تکمیل شده"
+        :value="(stats?.completedOrdersCount || 0).toLocaleString('fa-IR') + ' سفارش'"
+        icon="check"
+        subtitle="ارسال و تحویل موفق"
+        :loading="loading"
+      />
+
+      <!-- 5. Total Customers -->
+      <DashboardUDashboardKpiCard
+        title="خریداران ثبت‌نامی"
+        :value="(stats?.totalCustomers || 0).toLocaleString('fa-IR') + ' کاربر'"
+        icon="customers"
+        subtitle="مشتریان واقعی پلتفرم"
+        :loading="loading"
+      />
+
+      <!-- 6. Active Suppliers -->
+      <DashboardUDashboardKpiCard
+        title="تأمین‌کنندگان فعال"
+        :value="(stats?.activeSuppliers || 0).toLocaleString('fa-IR') + ' شرکت'"
+        icon="suppliers"
+        subtitle="تأمین‌کنندگان رسمی همکار"
+        :loading="loading"
+      />
+
+      <!-- 7. Total Products -->
+      <DashboardUDashboardKpiCard
+        title="تنوع کالاها در انبار"
+        :value="(stats?.totalProducts || 0).toLocaleString('fa-IR') + ' محصول'"
+        icon="products"
+        subtitle="محصولات فعال در فروشگاه"
+        :loading="loading"
+      />
+
+      <!-- 8. Pending Settlements -->
+      <DashboardUDashboardKpiCard
+        title="تسویه‌های در انتظار تایید"
+        :value="(stats?.pendingSettlementsCount || 0).toLocaleString('fa-IR') + ' بچ'"
+        icon="settlements"
+        subtitle="نیازمند بررسی مالی"
+        :loading="loading"
+      />
+    </div>
+
+    <!-- Interactive Analytics Chart -->
+    <DashboardUDashboardChart
+      :timeline="stats?.timeline || []"
+      title="روند درآمد، سفارشات و کارمزد ویپ‌لب"
+    />
+
+    <!-- Quick Insights: Category Distribution -->
+    <div class="rounded-xl bg-zinc-900/60 border border-zinc-800 p-5">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <DashboardIcon name="categories" :size="16" class="text-[#00DC82]" />
+          <span>توزیع کالایی در دسته‌بندی‌های فعال ویپ‌لب</span>
+        </h3>
+        <NuxtLink to="/admin-panel/products" class="text-xs text-[#00DC82] hover:underline font-medium">
+          مشاهده تمام کالاها ←
+        </NuxtLink>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+        <div
+          v-for="cat in stats?.categoryDistribution || []"
+          :key="cat.slug"
+          class="p-3 rounded-xl bg-zinc-950/60 border border-zinc-800 hover:border-zinc-700 transition text-right"
+        >
+          <div class="text-xs font-bold text-zinc-200 truncate">{{ cat.name }}</div>
+          <div class="text-[11px] text-zinc-500 mt-1 font-mono">
+            {{ cat.productCount.toLocaleString('fa-IR') }} کالا
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Stat KPI Cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      
-      <!-- Revenue -->
-      <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 hover:border-cyan-500/40 transition group shadow-lg">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-semibold text-slate-400">مجموع فروش کل</span>
-          <div class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 group-hover:scale-110 transition">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
+    <!-- Recent Orders Table -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <DashboardIcon name="orders" :size="18" class="text-[#00DC82]" />
+          <h2 class="text-base font-bold text-white">آخرین سفارشات ثبت‌شده در سیستم</h2>
         </div>
-        <div class="text-xl sm:text-2xl font-black text-white">
-          {{ formatPrice(stats.totalRevenue) }}
-        </div>
-        <div class="flex items-center gap-1.5 mt-2 text-xs text-emerald-400 font-medium">
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
-          <span>+{{ stats.revenueGrowth }}% رشد نسبت به ماه گذشته</span>
-        </div>
+        <NuxtLink
+          to="/admin-panel/orders"
+          class="text-xs text-[#00DC82] hover:underline font-medium transition flex items-center gap-1"
+        >
+          <span>مشاهده تمامی سفارشات</span>
+          <span>←</span>
+        </NuxtLink>
       </div>
 
-      <!-- Orders Count -->
-      <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 hover:border-indigo-500/40 transition group shadow-lg">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-semibold text-slate-400">کل سفارشات ثبت شده</span>
-          <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-          </div>
-        </div>
-        <div class="text-xl sm:text-2xl font-black text-white">
-          {{ stats.totalOrders.toLocaleString('fa-IR') }} سفارش
-        </div>
-        <div class="flex items-center gap-1.5 mt-2 text-xs text-indigo-400 font-medium">
-          <span class="px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold">
-            {{ stats.pendingOrdersCount }} در انتظار بررسی
-          </span>
-        </div>
-      </div>
-
-      <!-- Products Inventory -->
-      <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 hover:border-purple-500/40 transition group shadow-lg">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-semibold text-slate-400">تنوع محصولات فعال</span>
-          <div class="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
-        </div>
-        <div class="text-xl sm:text-2xl font-black text-white">
-          {{ stats.totalProducts.toLocaleString('fa-IR') }} کالا
-        </div>
-        <div class="flex items-center gap-1.5 mt-2 text-xs text-purple-400 font-medium">
-          <span>دیتابیس آنلاین PostgreSQL</span>
-        </div>
-      </div>
-
-      <!-- Low Stock Alerts -->
-      <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 hover:border-amber-500/40 transition group shadow-lg">
-        <div class="flex items-center justify-between mb-3">
-          <span class="text-xs font-semibold text-slate-400">هشدار موجودی انبار</span>
-          <div class="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-110 transition">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-          </div>
-        </div>
-        <div class="text-xl sm:text-2xl font-black text-white">
-          {{ (stats.lowStockCount + stats.outOfStockCount).toLocaleString('fa-IR') }} کالا
-        </div>
-        <div class="flex items-center gap-1.5 mt-2 text-xs text-rose-400 font-medium">
-          <span>{{ stats.outOfStockCount }} ناموجود، {{ stats.lowStockCount }} رو به اتمام</span>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Recent Orders & Fast Actions Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Recent Orders Table (2 Cols) -->
-      <div class="lg:col-span-2 rounded-2xl bg-slate-900/80 border border-slate-800/80 p-5 shadow-xl">
-        <div class="flex items-center justify-between mb-4 pb-3 border-b border-slate-800">
-          <div>
-            <h2 class="text-base font-bold text-white">آخرین سفارشات ثبت‌شده</h2>
-            <p class="text-xs text-slate-400">سفارشات اخیر در دیتابیس با قابلیت پیگیری آنی</p>
-          </div>
-          <NuxtLink
-            to="/admin-panel/orders"
-            class="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1 transition"
-          >
-            مشاهده همه
-            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-          </NuxtLink>
-        </div>
-
-        <div v-if="loading" class="py-12 text-center text-slate-500 text-xs">
-          در حال بارگذاری اطلاعات از دیتابیس...
-        </div>
-
-        <div v-else-if="recentOrders.length === 0" class="py-12 text-center text-slate-500 text-xs">
-          سفارشی یافت نشد.
-        </div>
-
-        <div v-else class="overflow-x-auto">
-          <table class="w-full text-right text-xs">
-            <thead>
-              <tr class="text-slate-400 border-b border-slate-800/60 pb-2">
-                <th class="py-2.5 font-medium">کد سفارش</th>
-                <th class="py-2.5 font-medium">مشتری</th>
-                <th class="py-2.5 font-medium">مبلغ کل</th>
-                <th class="py-2.5 font-medium">وضعیت</th>
-                <th class="py-2.5 font-medium">عملیات</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-800/40">
-              <tr v-for="order in recentOrders" :key="order.id" class="hover:bg-slate-800/30 transition">
-                <td class="py-3 font-mono font-bold text-cyan-400">
-                  {{ order.trackingCode || order.orderNumber || 'VPR-' + order.id }}
-                </td>
-                <td class="py-3 text-white font-medium">
-                  {{ order.customerName || order.shippingAddress?.fullName || 'کاربر VIP' }}
-                </td>
-                <td class="py-3 text-slate-300 font-mono font-semibold">
-                  {{ formatPrice(order.total) }}
-                </td>
-                <td class="py-3">
-                  <span
-                    :class="[
-                      'px-2 py-0.5 rounded-full text-[11px] font-bold inline-block',
-                      order.status === 'delivered' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                      order.status === 'processing' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' :
-                      order.status === 'shipped' ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20' :
-                      'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                    ]"
-                  >
-                    {{ order.status === 'delivered' ? 'تحویل‌شده' : order.status === 'processing' ? 'در حال پردازش' : order.status === 'shipped' ? 'ارسال‌شده' : 'در انتظار بررسی' }}
-                  </span>
-                </td>
-                <td class="py-3">
-                  <NuxtLink
-                    to="/admin-panel/orders"
-                    class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition text-[11px]"
-                  >
-                    جزئیات
-                  </NuxtLink>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Quick Action & System Health (1 Col) -->
-      <div class="space-y-4">
-        
-        <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/80 shadow-xl space-y-3">
-          <h3 class="text-sm font-bold text-white flex items-center gap-2">
-            <svg class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            دسترسی سریع به ماژول‌ها
-          </h3>
-          
-          <NuxtLink
-            to="/admin-panel/banners"
-            class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-cyan-500/40 transition group"
-          >
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-white group-hover:text-cyan-400 transition">ویرایشگر و بنرهای صفحه اصلی</p>
-                <p class="text-[11px] text-slate-400">تنظیم کادر عکس با کراپ هوشمند</p>
-              </div>
-            </div>
-            <svg class="w-4 h-4 text-slate-500 group-hover:text-cyan-400 transition transform -rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </NuxtLink>
-
-          <NuxtLink
-            to="/admin-panel/orders"
-            class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-indigo-500/40 transition group"
-          >
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-white group-hover:text-indigo-400 transition">مدیریت سفارشات دیتابیس</p>
-                <p class="text-[11px] text-slate-400">تغییر وضعیت و کدرهگیری</p>
-              </div>
-            </div>
-            <svg class="w-4 h-4 text-slate-500 group-hover:text-indigo-400 transition transform -rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </NuxtLink>
-
-          <NuxtLink
-            to="/admin-panel/products"
-            class="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 hover:border-purple-500/40 transition group"
-          >
-            <div class="flex items-center gap-3">
-              <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-xs font-bold text-white group-hover:text-purple-400 transition">انبار و محصولات</p>
-                <p class="text-[11px] text-slate-400">ویرایش قیمت و موجودی</p>
-              </div>
-            </div>
-            <svg class="w-4 h-4 text-slate-500 group-hover:text-purple-400 transition transform -rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </NuxtLink>
-        </div>
-
-        <!-- PostgreSQL Status -->
-        <div class="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-cyan-950/30 border border-cyan-500/20 text-xs">
-          <div class="flex items-center justify-between mb-2">
-            <span class="font-bold text-cyan-300">وضعیت سرویس دیتابیس</span>
-            <span class="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-bold">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              آنلاین و فعال
+      <DashboardUDashboardDataTable
+        :columns="orderColumns"
+        :rows="orders"
+        search-placeholder="جستجو بر اساس کد رهگیری، نام مشتری یا تلفن..."
+        :items-per-page="8"
+        :loading="loading"
+      >
+        <!-- Custom Cell: Order Number -->
+        <template #orderNumber="{ row }">
+          <div class="font-mono font-bold text-[#00DC82] flex items-center gap-2">
+            <span>#{{ row.orderNumber || row.id }}</span>
+            <span v-if="row.trackingCode" class="text-[10px] text-emerald-400 font-mono px-1 bg-emerald-500/10 rounded">
+              کد رهگیری
             </span>
           </div>
-          <p class="text-slate-400 text-[11px] leading-relaxed">
-            مخزن داده محلی: <code class="text-cyan-400 font-mono">vape_lifestyle_db</code> (پورت 5432)
-          </p>
-        </div>
+        </template>
 
-      </div>
+        <!-- Custom Cell: Customer -->
+        <template #customer="{ row }">
+          <div>
+            <div class="font-bold text-white">{{ row.customer?.name || 'مشتری ویپ‌لب' }}</div>
+            <div class="text-[10.5px] text-zinc-500 font-mono">{{ row.customer?.phone || row.customer?.email }}</div>
+          </div>
+        </template>
 
+        <!-- Custom Cell: Date -->
+        <template #createdAt="{ row }">
+          <span class="text-xs text-zinc-400 font-mono">
+            {{ formatDate(row.createdAt) }}
+          </span>
+        </template>
+
+        <!-- Custom Cell: Status -->
+        <template #status="{ row }">
+          <DashboardUDashboardBadge
+            :variant="getStatusBadgeVariant(row.status)"
+            :dot="true"
+          >
+            {{ getStatusLabel(row.status) }}
+          </DashboardUDashboardBadge>
+        </template>
+
+        <!-- Custom Cell: Total -->
+        <template #total="{ row }">
+          <span class="font-bold font-mono text-white">
+            {{ formatCurrency(row.total) }}
+          </span>
+        </template>
+
+        <!-- Custom Cell: Actions -->
+        <template #actions="{ row }">
+          <button
+            type="button"
+            @click="openOrderDetails(row)"
+            class="px-2.5 py-1 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-[11px] text-zinc-200 hover:text-white transition cursor-pointer"
+          >
+            بررسی و تغییر وضعیت
+          </button>
+        </template>
+      </DashboardUDashboardDataTable>
     </div>
 
-  </div>
+    <!-- Order Inspection & Status Modal -->
+    <DashboardUDashboardModal
+      v-model="orderModalOpen"
+      :title="`مدیریت سفارش #${selectedOrder?.orderNumber || selectedOrder?.id}`"
+      description="بررسی اقلام فاکتور، ویرایش وضعیت سفارش و ثبت کد رهگیری مرسوله پستی"
+      max-width="lg"
+    >
+      <div v-if="selectedOrder" class="space-y-4 text-right">
+        <!-- Customer Details Box -->
+        <div class="p-3.5 rounded-xl bg-zinc-950/80 border border-zinc-800 grid grid-cols-2 gap-3 text-xs">
+          <div>
+            <span class="text-zinc-500 block">خریدار:</span>
+            <span class="font-bold text-white">{{ selectedOrder.customer?.name }}</span>
+          </div>
+          <div>
+            <span class="text-zinc-500 block">شماره تماس:</span>
+            <span class="font-mono text-white">{{ selectedOrder.customer?.phone }}</span>
+          </div>
+          <div class="col-span-2">
+            <span class="text-zinc-500 block">نشانی تحویل:</span>
+            <span class="text-zinc-300">{{ selectedOrder.customer?.address }}, {{ selectedOrder.customer?.city }}</span>
+          </div>
+        </div>
+
+        <!-- Ordered Items -->
+        <div>
+          <h4 class="text-xs font-bold text-zinc-400 mb-2 uppercase">اقلام سفارش داده شده</h4>
+          <div class="divide-y divide-zinc-800 border border-zinc-800 rounded-xl overflow-hidden bg-zinc-950/60">
+            <div
+              v-for="item in selectedOrder.items || []"
+              :key="item.id"
+              class="p-2.5 flex items-center justify-between text-xs"
+            >
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded bg-zinc-900 flex items-center justify-center text-[10px] text-[#00DC82] font-mono">
+                  {{ item.quantity }}×
+                </span>
+                <span class="font-medium text-white">{{ item.productName }}</span>
+              </div>
+              <span class="font-mono text-zinc-400">{{ formatCurrency(item.price * item.quantity) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status & Courier Controls -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div>
+            <label class="block text-xs font-bold text-zinc-300 mb-1.5">وضعیت سفارش</label>
+            <select
+              v-model="selectedOrder.status"
+              class="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-[#00DC82]"
+            >
+              <option value="pending">در انتظار پرداخت</option>
+              <option value="paid">پرداخت شده</option>
+              <option value="processing">در حال پردازش انبار</option>
+              <option value="shipped">تحویل پیک / پست</option>
+              <option value="delivered">تحویل مشتری شده</option>
+              <option value="cancelled">لغو شده</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-zinc-300 mb-1.5">شرکت حمل‌ونقل / پیک</label>
+            <input
+              v-model="selectedOrder.courier"
+              type="text"
+              placeholder="پست پیشتاز / تیپاکس / پیک فوری"
+              class="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white focus:outline-none focus:border-[#00DC82]"
+            />
+          </div>
+
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-bold text-zinc-300 mb-1.5">کد رهگیری مرسوله پستی</label>
+            <input
+              v-model="selectedOrder.trackingCode"
+              type="text"
+              placeholder="شماره رهگیری ۲۴ رقمی پست یا بارنامه تیپاکس..."
+              class="w-full px-3 py-2 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white font-mono focus:outline-none focus:border-[#00DC82]"
+            />
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          @click="orderModalOpen = false"
+          class="px-4 py-2 rounded-xl bg-zinc-800 border border-zinc-700 text-xs text-zinc-400 hover:text-white transition cursor-pointer"
+        >
+          انصراف
+        </button>
+        <button
+          type="button"
+          :disabled="updatingOrder"
+          @click="saveOrderStatus"
+          class="px-5 py-2 rounded-xl bg-[#00DC82] text-zinc-950 hover:bg-[#00c575] font-bold text-xs transition disabled:opacity-50 cursor-pointer"
+        >
+          {{ updatingOrder ? 'در حال ثبت...' : 'ذخیره تغییرات سفارش' }}
+        </button>
+      </template>
+    </DashboardUDashboardModal>
+  </DashboardUDashboardPanel>
 </template>
